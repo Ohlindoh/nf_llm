@@ -1,0 +1,81 @@
+Name,Position,Team,Salary,Projection,Rank
+Patrick Mahomes,QB,Kansas City Chiefs,10000,28.5,1
+Russell Wilson,QB,Seattle Seahawks,6500,27.8,2
+Lamar Jackson,QB,Baltimore Ravens,8000,27.2,3
+Deshaun Watson,QB,Houston Texans,6500,26.9,4
+Dak Prescott,QB,Dallas Cowboys,7000,26.5,5
+Kyler Murray,QB,Arizona Cardinals,6500,25.3,6
+Aaron Rodgers,QB,Green Bay Packers,7500,25.1,7
+Tom Brady,QB,Tampa Bay Buccaneers,6500,23.4,8
+Ryan Tannehill,QB,Tennessee Titans,6000,22.7,9
+Matthew Stafford,QB,Detroit Lions,5500,21.8,10
+Dalvin Cook,RB,Minnesota Vikings,9500,28.5,1
+Christian McCaffrey,RB,Carolina Panthers,9200,27.8,2
+Alvin Kamara,RB,New Orleans Saints,8800,27.2,3
+Ezekiel Elliott,RB,Dallas Cowboys,8500,26.9,4
+Derrick Henry,RB,Tennessee Titans,8400,26.5,5
+Saquon Barkley,RB,New York Giants,8900,25.3,6
+Nick Chubb,RB,Cleveland Browns,8000,25.1,7
+Aaron Jones,RB,Green Bay Packers,7800,23.4,8
+Josh Jacobs,RB,Las Vegas Raiders,7800,22.7,9
+Austin Ekeler,RB,Los Angeles Chargers,7500,21.8,10
+Miles Sanders,RB,Philadelphia Eagles,7200,20.9,11
+Clyde Edwards-Helaire,RB,Kansas City Chiefs,7800,20.5,12
+Joe Mixon,RB,Cincinnati Bengals,7400,19.8,13
+Chris Carson,RB,Seattle Seahawks,7100,19.2,14
+David Montgomery,RB,Chicago Bears,7000,18.6,15
+Kenyan Drake,RB,Arizona Cardinals,7200,17.9,16
+James Conner,RB,Pittsburgh Steelers,7000,17.3,17
+Todd Gurley,RB,Atlanta Falcons,6800,16.7,18
+Jonathan Taylor,RB,Indianapolis Colts,6800,16.1,19
+Le'Veon Bell,RB,New York Jets,6600,15.4,20
+Michael Thomas,WR,New Orleans Saints,9000,28.5,1
+Davante Adams,WR,Green Bay Packers,8600,27.8,2
+Julio Jones,WR,Atlanta Falcons,8400,27.2,3
+Tyreek Hill,WR,Kansas City Chiefs,8200,26.9,12
+DeAndre Hopkins,WR,Arizona Cardinals,8000,26.5,5
+Chris Godwin,WR,Tampa Bay Buccaneers,7800,25.3,6
+Mike Evans,WR,Tampa Bay Buccaneers,7600,25.1,7
+Kenny Golladay,WR,Detroit Lions,7400,23.4,8
+Amari Cooper,WR,Dallas Cowboys,7200,22.7,9
+Allen Robinson,WR,Chicago Bears,7000,21.8,25
+DJ Moore,WR,Carolina Panthers,6800,20.9,11
+JuJu Smith-Schuster,WR,Pittsburgh Steelers,6600,20.5,4
+Robert Woods,WR,Los Angeles Rams,6400,19.8,13
+Calvin Ridley,WR,Atlanta Falcons,6200,19.2,14
+Courtland Sutton,WR,Denver Broncos,6000,18.6,15
+D.J. Chark,WR,Jacksonville Jaguars,5800,17.9,16
+Marquise Brown,WR,Baltimore Ravens,5600,17.3,17
+Terry McLaurin,WR,Washington Football Team,5400,30.7,18
+Tyler Lockett,WR,Seattle Seahawks,5200,16.1,19
+Michael Gallup,WR,Dallas Cowboys,5000,15.4,20
+Allen Lazard,WR,Green Bay Packers,2500,10.2,10
+Miles Boykin,WR,Baltimore Ravens,2600,9.8,25
+Justin Watson,WR,Tampa Bay Buccaneers,2400,9.5,27
+Mack Hollins,WR,Miami Dolphins,2300,9.2,28
+Devin Duvernay,WR,Baltimore Ravens,2500,8.9,29
+Dezmon Patmon,WR,Indianapolis Colts,2200,8.6,40
+K.J. Hamler,WR,Denver Broncos,2700,8.3,41
+Equanimeous St. Brown,WR,Green Bay Packers,2400,8.0,45
+Bisi Johnson,WR,Minnesota Vikings,2500,7.7,35
+Olamide Zaccheaus,WR,Atlanta Falcons,2300,7.4,50
+Greg Olsen,TE,Seattle Seahawks,6300,14.5,1
+Tyler Higbee,TE,Los Angeles Rams,6100,14.2,2
+Jared Cook,TE,New Orleans Saints,5900,13.9,3
+Noah Fant,TE,Denver Broncos,5700,13.5,4
+T.J. Hockenson,TE,Detroit Lions,5500,13.2,5
+Austin Hooper,TE,Cleveland Browns,5300,12.9,6
+Hayden Hurst,TE,Atlanta Falcons,5100,12.5,7
+Rob Gronkowski,TE,Tampa Bay Buccaneers,4900,12.2,8
+Mike Gesicki,TE,Miami Dolphins,4700,11.9,9
+Eric Ebron,TE,Pittsburgh Steelers,4500,11.5,10
+Jacksonville Jaguars,DST,Jacksonville Jaguars,4200,10.5,1
+Denver Broncos,DST,Denver Broncos,4000,9.8,2
+Indianapolis Colts,DST,Indianapolis Colts,3800,9.2,3
+Philadelphia Eagles,DST,Philadelphia Eagles,3700,8.7,4
+Tampa Bay Buccaneers,DST,Tampa Bay Buccaneers,3600,8.1,5
+Seattle Seahawks,DST,Seattle Seahawks,3500,7.6,6
+Los Angeles Chargers,DST,Los Angeles Chargers,3400,7.0,7
+Minnesota Vikings,DST,Minnesota Vikings,3300,6.5,8
+Dallas Cowboys,DST,Dallas Cowboys,3200,6.0,9
+Atlanta Falcons,DST,Atlanta Falcons,3100,5.4,10
