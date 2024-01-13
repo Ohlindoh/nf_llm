@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFS Optimizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.1"></script>
+    <style>
+        /* Additional styles if needed */
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">DFS Optimizer</h1>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white shadow-md rounded p-4">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Input Constraints</h2>
+                <form id="optimizerForm" class="space-y-3">
+                    <div>
+                        <label for="userInput" class="block text-sm font-medium text-gray-700">Your constraints</label>
+                        <textarea id="userInput" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Enter your constraints here..."></textarea>
+                    </div>
+                    <div>
+                        <button type="button" id="generateButton" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Generate
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-4">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Python Code</h3>
+                    <div id="codeArea" class="bg-gray-200 rounded p-3">
+                        <!-- Generated code will be displayed here -->
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white shadow-md rounded p-4">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Lineup</h2>
+                <div id="results" class="space-y-2">
+                    <p class="text-sm text-gray-600">QB:</p>
+                    <p class="text-sm text-gray-600">RB:</p>
+                    <p class="text-sm text-gray-600">RB:</p>
+                    <p class="text-sm text-gray-600">WR:</p>
+                    <p class="text-sm text-gray-600">WR:</p>
+                    <p class="text-sm text-gray-600">WR:</p>
+                    <p class="text-sm text-gray-600">TE:</p>
+                    <p class="text-sm text-gray-600">DST:</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- <script>
+        // Placeholder for the optimization logic
+        function optimize() {
+            // This function would contain the actual optimization logic
+            // For now, it just returns a placeholder result
+            return {
+                QB: 'Player 1',
+                RB1: 'Player 2',
+                RB2: 'Player 3',
+                WR1: 'Player 4',
+                WR2: 'Player 5',
+                WR3: 'Player 6',
+                TE: 'Player 7',
+                DST: 'Player 8'
+            };
+        }
+
+        document.getElementById('generateButton').addEventListener('click', function() {
+            const results = optimize();
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = `
+                <p class="text-sm text-gray-600">QB: ${results.QB}</p>
+                <p class="text-sm text-gray-600">RB: ${results.RB1}</p>
+                <p class="text-sm text-gray-600">RB: ${results.RB2}</p>
+                <p class="text-sm text-gray-600">WR: ${results.WR1}</p>
+                <p class="text-sm text-gray-600">WR: ${results.WR2}</p>
+                <p class="text-sm text-gray-600">WR: ${results.WR3}</p>
+                <p class="text-sm text-gray-600">TE: ${results.TE}</p>
+                <p class="text-sm text-gray-600">DST: ${results.DST}</p>
+            `;
+        });
+    </script> -->
+    <script src="/static/js/main.js"></script>
+
+</body>
+</html>

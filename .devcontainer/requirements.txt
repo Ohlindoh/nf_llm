@@ -2,3 +2,7 @@ pandas
 bs4
 openai
 langchain
+Flask
+pulp
+transformers
+torch
