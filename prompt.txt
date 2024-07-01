@@ -1,0 +1,68 @@
+plain_language_prompt = """
+## Fantasy Football Lineup Optimization Using Python
+
+### Objective
+
+Using the provided dataset of NFL players with columns `player_name`, `player_position_id`, `rank_ecr`, `pos_rank`, `projected_points`, and `salary`, write and execute Python code to generate **4 diverse and optimized lineups** for a fantasy football game. The solution should adhere to fantasy football rules and budget constraints, while also maximizing the salary spent within those constraints.
+
+### Lineup Requirements
+
+Each lineup must have:
+- One player with `player_position_id` as 'QB'
+- Two players with `player_position_id` as 'RB'
+- Three players with `player_position_id` as 'WR'
+- One player with `player_position_id` as 'TE'
+- One FLEX player (`player_position_id` is either 'RB', 'WR', or 'TE' and not already included in the lineup). Prefer WRs or RBs for the FLEX position.
+- One player with `player_position_id` as 'DST'
+
+### Constraints
+
+- A total salary cap of $50,000.
+- Attempt to spend all $50,000.
+- Lineups can't have the same player more than once.
+- Lineups must fulfill all positional requirements.
+
+### Steps
+
+1. **Initial Selection**:
+    - Use a value-based greedy approach to select players based on projected points per salary unit. This serves as a base lineup.
+
+2. **Budget Evaluation**:
+    - Calculate the total salary of the initial lineup.
+    - Verify that it does not exceed the budget of $50,000.
+
+3. **Constraints Evaluation**:
+    - Verify that the lineup adheres to the positional requirements.
+    - If not, repeat steps 1 and 2.
+
+4. **Optimization Procedure**:
+    - If there is significant salary left over ($1,000 or more):
+        - Identify the position with the lowest collective 'value'.
+        - Attempt to replace one or more players in this position to consume more salary while not exceeding the budget or significantly degrading projected points.
+        - If there is still more than $1,000 left over, consider rank or projected points for player upgrades.
+
+5. **Loop for Distinct Lineups**:
+    - Loop the entire procedure to generate the desired number of distinct lineups, ensuring no lineup is identical.
+
+### Output Format
+
+For each lineup, present the following:
+
+```plaintext
+Optimal Lineup {Lineup Number}:
+QB: {Name of QB player}, {Projected points for QB} points, ${Salary for QB}
+RB1: {Name of RB1 player}, {Projected points for RB1} points, ${Salary for RB1}
+RB2: {Name of RB2 player}, {Projected points for RB2} points, ${Salary for RB2}
+... [continue for each player]
+Total Points: {Sum of all projected points}
+Total Salary: ${Sum of all salaries}
+```
+
+### Example
+
+Provide an example of one lineup to illustrate the expected output format.
+
+---
+
+
+"""
