@@ -5,12 +5,37 @@ from collectors.dk import collect_draftkings_data
 from transformers.fantasy_pros_cleaner import transform_fantasy_pros_data
 from transformers.dk_cleaner import process_draftkings_data
 import pandas as pd
+import requests
 import logging
 import os
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+import requests
+
+def get_current_nfl_week():
+    # Define the ESPN scoreboard endpoint
+    url = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard'
+
+    # Make a GET request to the ESPN API
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+
+        # Extract the current week number
+        current_week = data.get('week', {}).get('number', None)
+        return current_week
+    else:
+        print(f"Failed to retrieve data: {response.status_code}")
+        return None
+
+# Get the current NFL week
+current_week = get_current_nfl_week()
+print(f"Current NFL Week: {current_week}")
+
 
 def collect_and_transform_fantasy_pros():
     logger.info("Collecting data from Fantasy Pros")
