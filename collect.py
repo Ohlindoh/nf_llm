@@ -1,7 +1,12 @@
-# collect.py
+"""
+This script orchestrates the collection and merging of fantasy football data from various sources.
+It fetches projections, DraftKings data, and player statistics, then combines them into a single dataset.
+"""
 
 import os
 import logging
+from typing import Callable, Any, Optional
+
 import pandas as pd
 
 from collectors.fantasy_pros_projections import collect_fantasy_pros_data
@@ -19,96 +24,95 @@ logger = logging.getLogger(__name__)
 OUTPUT_DIR = 'data'
 OUTPUT_FILE = 'merged_fantasy_football_data.csv'
 
-def collect_and_transform_data(collect_func, transform_func, source_name):
-    """Generic function to collect and transform data from a source."""
-    logger.info(f"Collecting data from {source_name}")
-    raw_data = collect_func()
-    
-    if raw_data is None:
-        logger.error(f"Failed to collect data from {source_name}")
-        return pd.DataFrame()
-    
-    if isinstance(raw_data, dict) and not raw_data:
-        logger.error(f"Collected empty dictionary from {source_name}")
-        return pd.DataFrame()
-    
-    if isinstance(raw_data, pd.DataFrame) and raw_data.empty:
-        logger.error(f"Collected empty DataFrame from {source_name}")
-        return pd.DataFrame()
-    
-    logger.info(f"Transforming {source_name} data")
-    transformed_data = transform_func(raw_data)
-    
-    if transformed_data is None or (isinstance(transformed_data, pd.DataFrame) and transformed_data.empty):
-        logger.error(f"{source_name} data transformation resulted in empty DataFrame")
-        return pd.DataFrame()
-    
-    return transformed_data
+def collect_and_transform_data(collect_func: Callable[..., Any], 
+                               transform_func: Callable[[Any], pd.DataFrame], 
+                               source_name: str) -> Optional[pd.DataFrame]:
+    """
+    Collect and transform data from a specific source.
 
-def merge_data(fantasy_pros_data, draftkings_data, player_stats_data):
-    """Merge data from different sources."""
-    logger.info("Merging Fantasy Pros, DraftKings, and player stats data")
-    
-    # Log data shapes
-    for name, data in [("Fantasy Pros", fantasy_pros_data), 
-                       ("DraftKings", draftkings_data), 
-                       ("Player stats", player_stats_data)]:
-        logger.info(f"{name} data shape: {data.shape}")
-        logger.info(f"{name} columns: {data.columns.tolist()}")
-    
-    # Merge Fantasy Pros and DraftKings data
-    merged_data = pd.merge(fantasy_pros_data, draftkings_data, 
-                           how='outer', on='player_name', suffixes=('_fp', '_dk'))
-    logger.info(f"Merged data (FP + DK) shape: {merged_data.shape}")
-    
-    # Merge with player stats data if possible
-    if 'player_name' in player_stats_data.columns:
-        merge_columns = ['player_name']
-        if 'player_team_id' in merged_data.columns and 'player_team_id' in player_stats_data.columns:
-            merge_columns.append('player_team_id')
-        
-        merged_data = pd.merge(merged_data, player_stats_data, 
-                               how='outer', on=merge_columns, suffixes=('', '_ps'))
-        logger.info(f"Final merged data shape: {merged_data.shape}")
-    else:
-        logger.warning("'player_name' column not found in player stats data. Skipping merge with player stats.")
-    
-    return merged_data
+    Args:
+        collect_func (Callable): Function to collect raw data.
+        transform_func (Callable): Function to transform raw data into a DataFrame.
+        source_name (str): Name of the data source for logging.
 
-def save_data(data, filename):
-    """Save the merged data to a CSV file."""
+    Returns:
+        Optional[pd.DataFrame]: Transformed data if successful, None otherwise.
+    """
+    logger.info(f"Processing data from {source_name}")
+    try:
+        raw_data = collect_func()
+        if raw_data is None or (isinstance(raw_data, pd.DataFrame) and raw_data.empty):
+            logger.error(f"No data collected from {source_name}")
+            return None
+
+        transformed_data = transform_func(raw_data)
+        if transformed_data is None or transformed_data.empty:
+            logger.error(f"{source_name} data transformation resulted in empty DataFrame")
+            return None
+
+        logger.info(f"Successfully processed {len(transformed_data)} entries from {source_name}")
+        return transformed_data
+    except Exception as e:
+        logger.exception(f"Error processing {source_name} data: {str(e)}")
+        return None
+
+def merge_dataframes(dataframes: list[pd.DataFrame]) -> Optional[pd.DataFrame]:
+    """
+    Merge multiple DataFrames on the 'player_name' column.
+
+    Args:
+        dataframes (list[pd.DataFrame]): List of DataFrames to merge.
+
+    Returns:
+        Optional[pd.DataFrame]: Merged DataFrame if successful, None otherwise.
+    """
+    if not dataframes:
+        logger.error("No DataFrames to merge")
+        return None
+
+    merged_df = dataframes[0]
+    for df in dataframes[1:]:
+        merged_df = pd.merge(merged_df, df, on='player_name', how='outer')
+
+    logger.info(f"Merged data shape: {merged_df.shape}")
+    return merged_df
+
+def save_data(data: pd.DataFrame, filename: str) -> None:
+    """
+    Save the DataFrame to a CSV file.
+
+    Args:
+        data (pd.DataFrame): Data to save.
+        filename (str): Name of the output file.
+    """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     output_path = os.path.join(OUTPUT_DIR, filename)
     data.to_csv(output_path, index=False)
     logger.info(f"Data saved to {output_path}")
 
-def main():
+def main() -> None:
+    """
+    Main function to orchestrate the data collection, merging, and saving process.
+    """
     try:
         current_week = get_current_nfl_week()
-        logger.info(f"Current NFL Week: {current_week}")
+        logger.info(f"Processing data for NFL Week: {current_week}")
 
-        # Collect and transform data from different sources
-        fantasy_pros_data = collect_and_transform_data(
-            collect_fantasy_pros_data, transform_fantasy_pros_data, "Fantasy Pros")
-        draftkings_data = collect_and_transform_data(
-            collect_draftkings_data, process_draftkings_data, "DraftKings")
-        player_stats_data = collect_and_transform_data(
-            lambda: collect_player_stats(current_week), lambda x: x, "Player Stats")
+        data_sources = [
+            (collect_fantasy_pros_data, transform_fantasy_pros_data, "Fantasy Pros Projections"),
+            (collect_draftkings_data, process_draftkings_data, "DraftKings"),
+            (lambda: collect_player_stats(current_week), lambda x: x, "Player Stats")
+        ]
 
-        # Check if any data was collected
-        if all(data.empty for data in [fantasy_pros_data, draftkings_data, player_stats_data]):
-            logger.error("No data collected from any source. Exiting.")
-            return
+        processed_data = [collect_and_transform_data(*source) for source in data_sources if source is not None]
+        merged_data = merge_dataframes([df for df in processed_data if df is not None])
 
-        # Merge and save data
-        merged_data = merge_data(fantasy_pros_data, draftkings_data, player_stats_data)
-        if not merged_data.empty:
+        if merged_data is not None and not merged_data.empty:
             save_data(merged_data, OUTPUT_FILE)
+            logger.info(f"Data collection and processing completed successfully.")
             logger.info(f"Total players in merged data: {len(merged_data)}")
-            logger.info("\nFirst few rows of merged data:")
-            logger.info(merged_data.head().to_string())
         else:
-            logger.error("Merged data is empty. Exiting.")
+            logger.error("Failed to produce merged data. Check individual source logs for details.")
 
     except Exception as e:
         logger.exception(f"An unexpected error occurred: {str(e)}")

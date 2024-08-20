@@ -5,21 +5,32 @@ import requests
 import pandas as pd
 import bs4
 import logging
-from typing import Optional, List, Dict
+from typing import Optional, Dict
+from io import StringIO
 
 # Add project root to Python path
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from transformers.utils import get_current_nfl_week, POSITION_COLUMN_MAPPING
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from transformers.utils import get_current_nfl_week
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+POSITIONS = ['QB', 'RB', 'WR', 'TE', 'DST']
+BASE_URL = 'https://www.fantasypros.com/nfl/stats/{}.php?range=week&week={}'
+
 def fetch_data(url: str) -> Optional[str]:
+    """
+    Fetch HTML content from a given URL.
+
+    Args:
+        url (str): The URL to fetch data from.
+
+    Returns:
+        Optional[str]: The HTML content if successful, None otherwise.
+    """
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -29,6 +40,15 @@ def fetch_data(url: str) -> Optional[str]:
         return None
 
 def parse_table(html_content: str) -> Optional[pd.DataFrame]:
+    """
+    Parse the HTML content to extract the data table.
+
+    Args:
+        html_content (str): The HTML content to parse.
+
+    Returns:
+        Optional[pd.DataFrame]: The parsed data as a DataFrame if successful, None otherwise.
+    """
     soup = bs4.BeautifulSoup(html_content, "html.parser")
     table = soup.find('table', {'id': 'data'})
     
@@ -36,86 +56,125 @@ def parse_table(html_content: str) -> Optional[pd.DataFrame]:
         logger.warning("No table found in the HTML content")
         return None
 
-    headers = [header.text.strip() for header in table.find_all('th')]
-    rows = table.find_all('tr')
-    player_stats = [
-        [col.text.strip() for col in row.find_all('td')]
-        for row in rows[1:] if isinstance(row, bs4.element.Tag)
-    ]
-
-    return pd.DataFrame(player_stats, columns=headers)
+    df = pd.read_html(StringIO(str(table)))[0]
+    df.columns = df.columns.map(lambda x: x[1] if isinstance(x, tuple) else x)
+    return df
 
 def get_position_data(position: str, week: int) -> Optional[pd.DataFrame]:
-    url = f'https://www.fantasypros.com/nfl/stats/{position.lower()}.php?range=week&week={week}'
+    """
+    Fetch and process data for a specific position and week.
+
+    Args:
+        position (str): The player position (e.g., 'QB', 'RB').
+        week (int): The NFL week number.
+
+    Returns:
+        Optional[pd.DataFrame]: Processed data for the position if successful, None otherwise.
+    """
+    url = BASE_URL.format(position.lower(), week)
     html_content = fetch_data(url)
     if html_content:
         df = parse_table(html_content)
         if df is not None:
             df['Position'] = position
+            df = df.rename(columns={'Player': 'player_name'})
             return df
     return None
 
 def rename_columns(df: pd.DataFrame, position: str) -> pd.DataFrame:
-    new_columns = []
-    for i, col in enumerate(df.columns):
-        if col in ['Player', 'Team', 'Position']:
-            new_columns.append(col)
-        else:
-            new_columns.append(f"{position}_{col}_{i}")
-    df.columns = new_columns
-    return df
+    """
+    Rename columns to include the position prefix.
 
-def collect_player_stats(week: int) -> Optional[pd.DataFrame]:
-    positions = ['QB', 'RB', 'WR', 'TE', 'DST']
-    all_data = []
+    Args:
+        df (pd.DataFrame): The DataFrame to process.
+        position (str): The player position.
 
-    for position in positions:
-        position_data = get_position_data(position, week)
-        if position_data is not None:
-            position_data = rename_columns(position_data, position)
-            all_data.append(position_data)
-            logger.info(f"{position} data processed successfully")
-            logger.info(f"Columns for {position}: {position_data.columns.tolist()}")
+    Returns:
+        pd.DataFrame: The DataFrame with renamed columns.
+    """
+    return df.rename(columns={col: f"{position}_{col}" for col in df.columns 
+                              if col not in ['player_name', 'Team', 'Position']})
+
+def collect_player_stats(week: int) -> Dict[str, pd.DataFrame]:
+    """
+    Collect player stats for all positions for a given week, keeping each position separate.
+
+    Args:
+        week (int): The NFL week number.
+
+    Returns:
+        Dict[str, pd.DataFrame]: A dictionary with positions as keys and their respective DataFrames as values.
+    """
+    position_data = {}
+
+    for position in POSITIONS:
+        df = get_position_data(position, week)
+        if df is not None:
+            df = rename_columns(df, position)
+            df['Position'] = position
+            df['player_name'] = df['player_name'].str.lower().str.replace(' ', '')
+            df.reset_index(drop=True, inplace=True)
+            position_data[position] = df
+            logger.info(f"{position} data processed successfully. Shape: {df.shape}")
+            logger.info(f"Columns for {position}: {df.columns.tolist()}")
+            logger.info(f"Sample data for {position}:\n{df.head().to_string()}")
         else:
             logger.error(f"Failed to process {position} data")
 
-    if not all_data:
-        logger.error("No data collected")
-        return None
+    return position_data
 
-    return pd.concat(all_data, ignore_index=True)
+def save_to_csv(data: pd.DataFrame, week: int, suffix: str = ""):
+    """
+    Save the collected data to a CSV file.
 
-def save_to_csv(data: pd.DataFrame, week: int):
+    Args:
+        data (pd.DataFrame): The data to save.
+        week (int): The NFL week number.
+        suffix (str): Optional suffix for the filename.
+    """
     data_dir = project_root / 'data'
     data_dir.mkdir(exist_ok=True)
     current_date = datetime.now().strftime("%Y%m%d")
-    filename = f"fantasy_pros_stats_week_{week}_{current_date}.csv"
+    filename = f"fantasy_pros_stats_week_{week}_{current_date}{('_' + suffix) if suffix else ''}.csv"
     filepath = data_dir / filename
     data.to_csv(filepath, index=False)
     logger.info(f"Data saved to {filepath}")
 
 def main():
-    current_week = get_current_nfl_week()
-    if current_week is None:
-        logger.error("Failed to get current NFL week")
-        return
+    """
+    Main function to orchestrate the data collection, analysis, and saving process.
+    """
+    try:
+        current_week = get_current_nfl_week()
+        if current_week is None:
+            logger.error("Failed to get current NFL week")
+            return
 
-    logger.info(f"Current NFL Week: {current_week}")
-    stats = collect_player_stats(current_week)
-    
-    if stats is None:
-        logger.error("Failed to collect player stats")
-        return
+        logger.info(f"Current NFL Week: {current_week}")
+        position_stats = collect_player_stats(current_week)
+        
+        if not position_stats:
+            logger.error("Failed to collect player stats for any position")
+            return
 
-    logger.info(f"Total rows: {len(stats)}")
-    logger.info(f"All columns: {stats.columns.tolist()}")
+        for position, df in position_stats.items():
+            logger.info(f"\nAnalyzing {position} data:")
+            logger.info(f"Shape: {df.shape}")
+            logger.info(f"Columns: {df.columns.tolist()}")
+            logger.info(f"Data types:\n{df.dtypes}")
+            logger.info(f"Number of unique players: {df['player_name'].nunique()}")
+            logger.info(f"Sample data:\n{df.head().to_string()}")
 
-    for position in ['QB', 'RB', 'WR', 'TE', 'DST']:
-        position_data = stats[stats['Position'] == position]
-        logger.info(f"\n{position} Columns: {', '.join(position_data.columns)}")
-        logger.info(f"\nSample data for {position}:\n{position_data.head().to_string()}")
+            # Save individual position data
+            save_to_csv(df, current_week, f"{position}_stats")
 
-    save_to_csv(stats, current_week)
+        logger.info("Data processing and saving completed for all positions")
+
+        # Here you can add logic to combine the data if it looks consistent across positions
+        # For now, we're keeping them separate to analyze the structure
+
+    except Exception as e:
+        logger.exception(f"An unexpected error occurred in main: {str(e)}")
 
 if __name__ == "__main__":
     main()
