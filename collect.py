@@ -6,6 +6,8 @@ It fetches projections, DraftKings data, and player statistics, then combines th
 import os
 import logging
 from typing import Callable, Any, Union
+import re
+import numpy as np
 
 import pandas as pd
 
@@ -34,11 +36,46 @@ def collect_and_transform_data(collect_func: Callable[..., Any],
         logger.error(f"Error processing {source_name} data: {str(e)}")
         return pd.DataFrame()
 
+def clean_player_name(name: str) -> str:
+    """Clean player name for consistent matching."""
+    return re.sub(r'[^a-zA-Z]', '', name).lower()
+
 def merge_dataframes(dataframes: list[pd.DataFrame]) -> pd.DataFrame:
     non_empty_dfs = [df for df in dataframes if not df.empty]
     if not non_empty_dfs:
         return pd.DataFrame()
-    merged_df = pd.concat(non_empty_dfs, axis=1)
+    
+    # Assume the first dataframe is the base (likely the Fantasy Pros projections)
+    merged_df = non_empty_dfs[0]
+    
+    # Clean player names in the base dataframe
+    merged_df['clean_name'] = merged_df['player_name'].apply(clean_player_name)
+    
+    # Merge with other dataframes (DraftKings data and position-specific stats)
+    for df in non_empty_dfs[1:]:
+        df['clean_name'] = df['player_name'].apply(clean_player_name)
+        merged_df = pd.merge(merged_df, df, on='clean_name', how='outer', suffixes=('', '_y'))
+        
+        # Combine columns with the same information
+        for col in merged_df.columns:
+            if col.endswith('_y'):
+                base_col = col[:-2]
+                merged_df[base_col] = merged_df[base_col].combine_first(merged_df[col])
+                merged_df = merged_df.drop(col, axis=1)
+    
+    # Remove rows where all values are NaN
+    merged_df = merged_df.dropna(how='all')
+    
+    # Fill NaN values in numeric columns with 0
+    numeric_columns = merged_df.select_dtypes(include=[np.number]).columns
+    merged_df[numeric_columns] = merged_df[numeric_columns].fillna(0)
+    
+    # Ensure each player only has one row
+    merged_df = merged_df.groupby('clean_name', as_index=False).first()
+    
+    # Remove the clean_name column
+    merged_df = merged_df.drop('clean_name', axis=1)
+    
     logger.info(f"Merged data shape: {merged_df.shape}")
     return merged_df
 

@@ -5,6 +5,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from typing import Optional, Dict
 from io import StringIO
+import re
 
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
@@ -20,9 +21,9 @@ def get_column_mapping(position: str) -> Dict[str, str]:
             'ATT': 'QB_PASS_ATT',
             'YDS': 'QB_PASS_YDS',
             'TD': 'QB_PASS_TD',
-            'ATT.1': 'QB_RUSH_ATT',
-            'YDS.1': 'QB_RUSH_YDS',
-            'TD.1': 'QB_RUSH_TD',
+            'ATT': 'QB_RUSH_ATT',
+            'YDS': 'QB_RUSH_YDS',
+            'TD': 'QB_RUSH_TD',
             'FPTS': 'QB_FPTS'
         }
     elif position == 'RB':
@@ -31,8 +32,8 @@ def get_column_mapping(position: str) -> Dict[str, str]:
             'YDS': 'RB_RUSH_YDS',
             'TD': 'RB_RUSH_TD',
             'REC': 'RB_REC',
-            'YDS.1': 'RB_REC_YDS',
-            'TD.1': 'RB_REC_TD',
+            'YDS': 'RB_REC_YDS',
+            'TD': 'RB_REC_TD',
             'FPTS': 'RB_FPTS'
         }
     elif position in ['WR', 'TE']:
@@ -71,16 +72,24 @@ def fetch_and_parse_data(position: str, week: int) -> Optional[pd.DataFrame]:
         df = df.rename(columns=column_mapping)
         
         # Select only the mapped columns and 'Player'
-        columns_to_keep = list(column_mapping.values()) + ['Player']
+        columns_to_keep = ['Player'] + list(column_mapping.values())
         df = df[columns_to_keep]
         
         df = df.rename(columns={'Player': 'player_name'})
         df['Position'] = position
-        df['player_name'] = df['player_name'].str.lower().str.replace(' ', '')
+        df['player_name'] = df['player_name'].apply(clean_player_name)
         return df
     except Exception as e:
         print(f"Error processing {position} data: {e}")
         return None
+
+def clean_player_name(name: str) -> str:
+    # Remove team name in parentheses
+    name = re.sub(r'\([^)]*\)', '', name)
+    # Remove suffixes and clean up
+    name = re.sub(r"(?:I{1,3}|IV|V?I{0,3}|Jr|Sr)\s*$", "", name)
+    # Convert to lowercase, remove extra spaces, and replace spaces with empty string
+    return name.strip().lower().replace(' ', '')
 
 def collect_player_stats(week: int) -> Dict[str, pd.DataFrame]:
     return {pos: fetch_and_parse_data(pos, week) for pos in POSITIONS if fetch_and_parse_data(pos, week) is not None}
