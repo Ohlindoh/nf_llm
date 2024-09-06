@@ -4,12 +4,15 @@ import re
 import json
 import logging
 from typing import Optional, Dict, List
+import os
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 BASE_URL = 'https://www.fantasypros.com/nfl/rankings'
 RANKINGS = ['qb.php', 'ppr-rb.php', 'ppr-wr.php', 'ppr-te.php', 'dst.php']
+OUTPUT_DIR = 'data'
+OUTPUT_FILE = 'fantasy_projections.csv'
 
 def fetch_fantasy_pros_data(url: str) -> Optional[str]:
     """Fetch data from the given URL."""
@@ -63,8 +66,27 @@ def collect_fantasy_pros_data() -> pd.DataFrame:
         return pd.DataFrame()
 
     df = pd.DataFrame(all_data)
+    
+    # Select only the columns we want to keep
+    columns_to_keep = [
+        'player_name', 'player_team_id', 'player_position_id', 
+        'rank_ecr', 'pos_rank', 'r2p_pts',
+    ]
+    df = df[columns_to_keep]
+    
+    # Rename 'r2p_pts' to 'projected_points'
+    df = df.rename(columns={'r2p_pts': 'projected_points'})
+    
     logger.info(f"Total players collected: {len(df)}")
+    logger.info(f"Columns: {df.columns.tolist()}")
     return df
+
+def save_fantasy_pros_data(df: pd.DataFrame) -> None:
+    """Save the collected Fantasy Pros data to a CSV file."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
+    df.to_csv(output_path, index=False)
+    logger.info(f"Fantasy Pros data saved to {output_path}")
 
 if __name__ == "__main__":
     df = collect_fantasy_pros_data()
@@ -72,5 +94,6 @@ if __name__ == "__main__":
         print(df.head())
         print(f"Total players collected: {len(df)}")
         print(f"Columns: {df.columns.tolist()}")
+        save_fantasy_pros_data(df)
     else:
         print("No data collected.")

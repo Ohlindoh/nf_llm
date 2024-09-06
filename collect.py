@@ -27,9 +27,27 @@ def collect_and_transform_data(collect_func: Callable[..., Any],
     logger.info(f"Processing data from {source_name}")
     try:
         raw_data = collect_func()
+        logger.info(f"Raw data from {source_name}: {type(raw_data)}")
+        if isinstance(raw_data, pd.DataFrame):
+            logger.info(f"Raw data shape: {raw_data.shape}")
+            logger.info(f"Raw data columns: {raw_data.columns.tolist()}")
+        
         transformed_data = transform_func(raw_data)
+        logger.info(f"Transformed data from {source_name}: {type(transformed_data)}")
+        
         if isinstance(transformed_data, dict):
             transformed_data = pd.DataFrame(transformed_data)
+        
+        if isinstance(transformed_data, pd.DataFrame):
+            logger.info(f"Transformed data shape: {transformed_data.shape}")
+            logger.info(f"Transformed data columns: {transformed_data.columns.tolist()}")
+            if 'player_name' not in transformed_data.columns:
+                logger.warning(f"{source_name} data doesn't have a 'player_name' column. Skipping.")
+                return pd.DataFrame()
+        else:
+            logger.warning(f"Unexpected data type from {source_name}. Expected DataFrame or dict, got {type(transformed_data)}")
+            return pd.DataFrame()
+        
         logger.info(f"Processed {len(transformed_data)} entries from {source_name}")
         return transformed_data
     except Exception as e:
@@ -41,42 +59,25 @@ def clean_player_name(name: str) -> str:
     return re.sub(r'[^a-zA-Z]', '', name).lower()
 
 def merge_dataframes(dataframes: list[pd.DataFrame]) -> pd.DataFrame:
-    non_empty_dfs = [df for df in dataframes if not df.empty]
-    if not non_empty_dfs:
+    if not dataframes:
         return pd.DataFrame()
     
-    # Assume the first dataframe is the base (likely the Fantasy Pros projections)
-    merged_df = non_empty_dfs[0]
+    # Assume the first dataframe is the base (Fantasy Pros projections)
+    merged_df = dataframes[0]
     
-    # Clean player names in the base dataframe
-    merged_df['clean_name'] = merged_df['player_name'].apply(clean_player_name)
+    # Merge with other dataframes
+    for df in dataframes[1:]:
+        # Ensure 'player_name' is cleaned in the dataframe to be merged
+        if 'player_name' in df.columns:
+            df['player_name'] = df['player_name'].apply(clean_player_name)
+        # Use inner join to keep only records that exist in both dataframes
+        merged_df = pd.merge(merged_df, df, on='player_name', how='inner')
     
-    # Merge with other dataframes (DraftKings data and position-specific stats)
-    for df in non_empty_dfs[1:]:
-        df['clean_name'] = df['player_name'].apply(clean_player_name)
-        merged_df = pd.merge(merged_df, df, on='clean_name', how='outer', suffixes=('', '_y'))
-        
-        # Combine columns with the same information
-        for col in merged_df.columns:
-            if col.endswith('_y'):
-                base_col = col[:-2]
-                merged_df[base_col] = merged_df[base_col].combine_first(merged_df[col])
-                merged_df = merged_df.drop(col, axis=1)
-    
-    # Remove rows where all values are NaN
-    merged_df = merged_df.dropna(how='all')
-    
-    # Fill NaN values in numeric columns with 0
-    numeric_columns = merged_df.select_dtypes(include=[np.number]).columns
-    merged_df[numeric_columns] = merged_df[numeric_columns].fillna(0)
-    
-    # Ensure each player only has one row
-    merged_df = merged_df.groupby('clean_name', as_index=False).first()
-    
-    # Remove the clean_name column
-    merged_df = merged_df.drop('clean_name', axis=1)
+    # Remove any remaining rows with null values
+    merged_df = merged_df.dropna()
     
     logger.info(f"Merged data shape: {merged_df.shape}")
+    logger.info(f"Merged data columns: {merged_df.columns.tolist()}")
     return merged_df
 
 def save_data(data: pd.DataFrame, filename: str) -> None:
@@ -90,18 +91,38 @@ def main() -> None:
         current_week = utils.get_current_nfl_week()
         logger.info(f"Processing data for NFL Week: {current_week}")
 
-        data_sources = [
-            (fantasy_pros_projections.collect_fantasy_pros_data, fantasy_pros_cleaner.transform_fantasy_pros_data, "Fantasy Pros Projections"),
-            (dk.collect_draftkings_data, dk_cleaner.process_draftkings_data, "DraftKings"),
-            (lambda: fantasy_pros_stats.collect_player_stats(current_week), lambda x: x, "Player Stats")
-        ]
+        # Process Fantasy Pros Projections
+        fantasy_pros_raw = fantasy_pros_projections.collect_fantasy_pros_data()
+        logger.info(f"Raw Fantasy Pros data columns: {fantasy_pros_raw.columns.tolist()}")
+        
+        fantasy_pros_transformed = fantasy_pros_cleaner.transform_fantasy_pros_data(fantasy_pros_raw)
+        logger.info(f"Transformed Fantasy Pros data columns: {fantasy_pros_transformed.columns.tolist()}")
+        
+        if 'player_name' not in fantasy_pros_transformed.columns:
+            logger.error("'player_name' column not found in transformed Fantasy Pros data")
+            return
 
-        processed_data = [collect_and_transform_data(*source) for source in data_sources]
-        merged_data = merge_dataframes(processed_data)
+        # Clean player names in Fantasy Pros data
+        fantasy_pros_transformed['player_name'] = fantasy_pros_transformed['player_name'].apply(clean_player_name)
+        
+        logger.info(f"Fantasy Pros transformed data shape: {fantasy_pros_transformed.shape}")
+        logger.info(f"Fantasy Pros transformed data columns: {fantasy_pros_transformed.columns.tolist()}")
+
+        # Process DraftKings data
+        dk_raw = dk.collect_draftkings_data()
+        dk_transformed = dk_cleaner.process_draftkings_data(dk_raw)
+        # Clean player names in DraftKings data
+        dk_transformed['player_name'] = dk_transformed['player_name'].apply(clean_player_name)
+        logger.info(f"DraftKings transformed data shape: {dk_transformed.shape}")
+        logger.info(f"DraftKings transformed data columns: {dk_transformed.columns.tolist()}")
+
+        # Merge dataframes
+        merged_data = merge_dataframes([fantasy_pros_transformed, dk_transformed])
 
         if not merged_data.empty:
             save_data(merged_data, OUTPUT_FILE)
             logger.info(f"Data collection completed. Total players: {len(merged_data)}")
+            logger.info(f"Columns in merged data: {merged_data.columns.tolist()}")
         else:
             logger.error("Failed to produce merged data. Check individual source logs for details.")
 
