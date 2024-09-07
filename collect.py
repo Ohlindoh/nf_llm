@@ -18,7 +18,7 @@ sys.path.append(collectors_dir)
 from fantasy_pros_projections import collect_and_clean_fantasy_pros_data
 from dk import collect_draftkings_data
 from collectors.fantasy_pros_stats import collect_fantasy_pros_stats
-from transformers.utils import clean_player_name
+from collectors.utils import clean_player_name
 
 
 OUTPUT_DIR = 'data'

@@ -42,13 +42,16 @@ def get_draftkings_contest_names():
         return []
 
 def clean_player_name(name: str) -> str:
-    """Clean player name for consistent matching across all data sources."""
+    """
+    Clean player name for consistent matching across all modules.
+    Remove suffixes, spaces, and non-alphabetic characters.
+    """
     # Remove team name in parentheses
     name = re.sub(r'\([^)]*\)', '', name)
-    # Remove suffixes and clean up
-    name = re.sub(r"(?:I{1,3}|IV|V?I{0,3}|Jr|Sr)\s*$", "", name)
-    # Convert to lowercase, remove extra spaces, and replace spaces with empty string
-    return name.strip().lower().replace(' ', '')
+    # Remove suffixes (including 'II', 'III', 'IV', 'V', 'Jr', 'Sr', etc.)
+    name = re.sub(r'\s+(?:I{1,3}|IV|V?I{0,3}|Jr\.?|Sr\.?)\.?\s*$', '', name)
+    # Convert to lowercase, remove extra spaces and non-alphabetic characters
+    return re.sub(r'[^a-z]', '', name.strip().lower())
 
 # Easy invocation example for testing
 if __name__ == "__main__":

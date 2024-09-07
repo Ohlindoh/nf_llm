@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any, List
 import os
 from datetime import datetime
 
-from transformers.utils import clean_player_name
+from collectors.utils import clean_player_name
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -61,11 +61,7 @@ def collect_draftkings_data(contest_type: str) -> Optional[List[Dict[str, Any]]]
         for player in data['draftables']:
             processed_player = {
                 'player_name': clean_player_name(player['displayName']),
-                'original_name': player['displayName'],
-                'player_team': player['teamAbbreviation'],
-                'player_position': player['position'],
                 'salary': player['salary'],
-                'projected_points': player.get('projectedPoints', 0)
             }
             processed_data.append(processed_player)
         

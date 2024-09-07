@@ -6,12 +6,12 @@ from bs4 import BeautifulSoup
 from typing import Optional, Dict
 from io import StringIO
 import re
+import logging
 
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from transformers.utils import get_current_nfl_week
-from transformers.utils import clean_player_name, get_current_nfl_week
+from collectors.utils import clean_player_name, get_current_nfl_week
 
 POSITIONS = ['QB', 'RB', 'WR', 'TE', 'DST']
 BASE_URL = 'https://www.fantasypros.com/nfl/stats/{}.php?range=week&week={}'
@@ -51,7 +51,6 @@ def get_column_mapping(position: str) -> Dict[str, str]:
             'INT': 'DST_INT',
             'FR': 'DST_FR',
             'DEF TD': 'DST_TD',
-            'PA': 'DST_PA',
             'FPTS': 'DST_FPTS'
         }
     return {}
@@ -83,14 +82,6 @@ def fetch_and_parse_data(position: str, week: int) -> Optional[pd.DataFrame]:
     except Exception as e:
         print(f"Error processing {position} data: {e}")
         return None
-
-def clean_player_name(name: str) -> str:
-    # Remove team name in parentheses
-    name = re.sub(r'\([^)]*\)', '', name)
-    # Remove suffixes and clean up
-    name = re.sub(r"(?:I{1,3}|IV|V?I{0,3}|Jr|Sr)\s*$", "", name)
-    # Convert to lowercase, remove extra spaces, and replace spaces with empty string
-    return name.strip().lower().replace(' ', '')
 
 def collect_player_stats(week: int) -> Dict[str, pd.DataFrame]:
     return {pos: fetch_and_parse_data(pos, week) for pos in POSITIONS if fetch_and_parse_data(pos, week) is not None}
