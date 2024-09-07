@@ -9,3 +9,4 @@ pyautogen
 scikit-learn
 numpy
 lxml
+ipywidgets

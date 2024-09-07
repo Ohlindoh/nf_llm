@@ -14,9 +14,6 @@ logger = logging.getLogger(__name__)
 CONTESTS_URL = "https://www.draftkings.com/lobby/getcontests?sport=NFL"
 DRAFTABLES_URL = "https://api.draftkings.com/draftgroups/v1/draftgroups/{}/draftables"
 
-def clean_player_name(name: str) -> str:
-    """Clean player name for consistent matching."""
-    return re.sub(r'[^a-zA-Z]', '', name).lower()
 
 def get_contest_by_type(contests: List[Dict[str, Any]], contest_type: str) -> Optional[Dict[str, Any]]:
     """Find a contest based on the specified type."""
