@@ -8,6 +8,20 @@ logger = logging.getLogger(__name__)
 ESPN_API_URL = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard'
 DRAFTKINGS_API_URL = 'https://www.draftkings.com/lobby/getcontests?sport=NFL'
 
+TEAM_NAME_MAPPING = {
+    'sanfrancisco49ers': '49ers', 'dallascowboys': 'cowboys', 'philadelphiaeagles': 'eagles',
+    'buffalobills': 'bills', 'newyorkjets': 'jets', 'newenglandpatriots': 'patriots',
+    'baltimoreravens': 'ravens', 'denverbroncos': 'broncos', 'pittsburghsteelers': 'steelers',
+    'neworleanssaints': 'saints', 'kansascitychiefs': 'chiefs', 'miamidolphins': 'dolphins',
+    'washingtoncommanders': 'commanders', 'cincinnatibengals': 'bengals', 'clevelandbrowns': 'browns',
+    'greenbaypackers': 'packers', 'losangeleschargers': 'chargers', 'jacksonvillejaguars': 'jaguars',
+    'tampabaybuccaneers': 'buccaneers', 'seattleseahawks': 'seahawks', 'indianapoliscolts': 'colts',
+    'carolinapanthers': 'panthers', 'tennesseetitans': 'titans', 'newyorkgiants': 'giants',
+    'detroitlions': 'lions', 'losangelesrams': 'rams', 'minnesotavikings': 'vikings',
+    'atlantafalcons': 'falcons', 'arizonacardinals': 'cardinals', 'houstontexans': 'texans',
+    'chicagobears': 'bears', 'lasvegasraiders': 'raiders'
+}
+
 def get_current_nfl_week():
     """Fetch the current NFL week number from ESPN API based on the current date."""
     response = requests.get(ESPN_API_URL)
@@ -52,6 +66,16 @@ def clean_player_name(name: str) -> str:
     name = re.sub(r'\s+(?:I{1,3}|IV|V?I{0,3}|Jr\.?|Sr\.?)\.?\s*$', '', name)
     # Convert to lowercase, remove extra spaces and non-alphabetic characters
     return re.sub(r'[^a-z]', '', name.strip().lower())
+
+def clean_dst_name(name: str) -> str:
+    """
+    Clean DST name for consistent matching across all modules.
+    """
+    cleaned_name = re.sub(r'[^a-z]', '', name.strip().lower())
+    for full_name, short_name in TEAM_NAME_MAPPING.items():
+        if full_name in cleaned_name:
+            return f"{short_name.lower()}"
+    return f"{cleaned_name}"
 
 # Easy invocation example for testing
 if __name__ == "__main__":

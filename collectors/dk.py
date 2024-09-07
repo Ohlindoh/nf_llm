@@ -101,8 +101,7 @@ def main(contest_type: str):
     data = collect_draftkings_data(contest_type)
     if data:
         print(f"Successfully collected data for {len(data)} players")
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"dk_{contest_type}_{timestamp}.csv"
+        filename = f"dk.csv"
         write_to_csv(data, filename)
         print("Sample data:")
         for player in data[:5]:  # Print first 5 players as a sample

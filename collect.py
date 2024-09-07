@@ -62,6 +62,7 @@ def collect_all_data(dk_contest_type: str) -> Dict[str, pd.DataFrame]:
 def merge_dataframes(dataframes: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     """
     Merge all collected dataframes into a single dataframe, ensuring unique entries per player.
+    Drop any rows with null values.
     """
     if not dataframes:
         logger.error("No data to merge")
@@ -87,7 +88,11 @@ def merge_dataframes(dataframes: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     # Remove any remaining duplicate rows
     merged_df.drop_duplicates(subset='player_name', keep='first', inplace=True)
 
-    logger.info(f"Merged data shape: {merged_df.shape}")
+    # Drop rows with any null values
+    merged_df.dropna(inplace=True)
+
+    logger.info(f"Merged data shape before dropping nulls: {merged_df.shape}")
+    logger.info(f"Merged data shape after dropping nulls: {merged_df.shape}")
     logger.info(f"Merged data columns: {merged_df.columns.tolist()}")
     return merged_df
 
