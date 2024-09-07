@@ -58,9 +58,6 @@ def collect_and_clean_fantasy_pros_data() -> pd.DataFrame:
 
         data = parse_fantasy_pros_data(html_content)
         if data and 'players' in data:
-            # Add more detailed logging here
-            logger.info(f"Data structure for {ranking}: {data.keys()}")
-            logger.info(f"Player data structure: {data['players'][0].keys() if data['players'] else 'No players'}")
             all_data.extend(data['players'])
             logger.info(f"Successfully collected data for {ranking}")
         else:
@@ -71,9 +68,6 @@ def collect_and_clean_fantasy_pros_data() -> pd.DataFrame:
         return pd.DataFrame()
 
     df = pd.DataFrame(all_data)
-    
-    # Log the columns before selection
-    logger.info(f"All columns before selection: {df.columns.tolist()}")
     
     # Select only the columns we want to keep
     columns_to_keep = [
@@ -87,10 +81,6 @@ def collect_and_clean_fantasy_pros_data() -> pd.DataFrame:
     
     # Clean player names
     df['player_name'] = df.apply(lambda row: clean_dst_name(row['player_name']) if row['player_position_id'] == 'DST' else clean_player_name(row['player_name']), axis=1)
-    
-    # Add logging to check cleaned names
-    for original, cleaned in zip(df['player_name'], df['player_name'].apply(clean_player_name)):
-        logger.info(f"Cleaned name: {original} -> {cleaned}")
     
     logger.info(f"Total players collected and cleaned: {len(df)}")
     logger.info(f"Columns after cleaning: {df.columns.tolist()}")
