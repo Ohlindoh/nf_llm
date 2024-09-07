@@ -6,6 +6,8 @@ import logging
 from typing import Optional, Dict, List
 import os
 
+from transformers.utils import clean_player_name
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -42,8 +44,12 @@ def parse_fantasy_pros_data(html_content: str) -> Optional[Dict]:
         logger.error(f"Error decoding JSON data: {e}")
         return None
 
-def collect_fantasy_pros_data() -> pd.DataFrame:
-    """Collect and combine data from all ranking pages."""
+def clean_player_name(name: str) -> str:
+    """Clean player name for consistent matching."""
+    return re.sub(r'[^a-zA-Z]', '', name).lower()
+
+def collect_and_clean_fantasy_pros_data() -> pd.DataFrame:
+    """Collect, combine, and clean data from all ranking pages."""
     all_data: List[Dict] = []
 
     for ranking in RANKINGS:
@@ -77,22 +83,25 @@ def collect_fantasy_pros_data() -> pd.DataFrame:
     # Rename 'r2p_pts' to 'projected_points'
     df = df.rename(columns={'r2p_pts': 'projected_points'})
     
-    logger.info(f"Total players collected: {len(df)}")
+    # Clean player names
+    df['player_name'] = df['player_name'].apply(clean_player_name)
+    
+    logger.info(f"Total players collected and cleaned: {len(df)}")
     logger.info(f"Columns: {df.columns.tolist()}")
     return df
 
 def save_fantasy_pros_data(df: pd.DataFrame) -> None:
-    """Save the collected Fantasy Pros data to a CSV file."""
+    """Save the collected and cleaned Fantasy Pros data to a CSV file."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
     df.to_csv(output_path, index=False)
     logger.info(f"Fantasy Pros data saved to {output_path}")
 
 if __name__ == "__main__":
-    df = collect_fantasy_pros_data()
+    df = collect_and_clean_fantasy_pros_data()
     if not df.empty:
         print(df.head())
-        print(f"Total players collected: {len(df)}")
+        print(f"Total players collected and cleaned: {len(df)}")
         print(f"Columns: {df.columns.tolist()}")
         save_fantasy_pros_data(df)
     else:

@@ -11,6 +11,7 @@ project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
 from transformers.utils import get_current_nfl_week
+from transformers.utils import clean_player_name, get_current_nfl_week
 
 POSITIONS = ['QB', 'RB', 'WR', 'TE', 'DST']
 BASE_URL = 'https://www.fantasypros.com/nfl/stats/{}.php?range=week&week={}'
@@ -99,6 +100,26 @@ def save_to_csv(data: pd.DataFrame, week: int, suffix: str = ""):
     data_dir.mkdir(exist_ok=True)
     filename = f"fantasy_pros_stats_week_{week}_{suffix}.csv"
     data.to_csv(data_dir / filename, index=False)
+
+def collect_fantasy_pros_stats() -> pd.DataFrame:
+    current_week = get_current_nfl_week()
+    if current_week is None:
+        print("Failed to get current NFL week")
+        return pd.DataFrame()
+
+    position_stats = collect_player_stats(current_week)
+    
+    if not position_stats:
+        print("Failed to collect player stats for any position")
+        return pd.DataFrame()
+
+    # Combine all position dataframes into one
+    combined_df = pd.concat(position_stats.values(), ignore_index=True)
+
+    # Save the combined data
+    save_to_csv(combined_df, current_week, "all_positions")
+
+    return combined_df
 
 def main():
     current_week = get_current_nfl_week()

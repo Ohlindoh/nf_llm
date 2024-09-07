@@ -1,31 +1,798 @@
-player_name,player_team_id,player_position_id,rank_ecr,pos_rank,projected_points,salary
-jalenhurts,PHI,QB,2,QB2,22.5,15900
-jordanlove,GB,QB,9,QB9,18.4,14700
-kennypickett,PHI,QB,49,QB49,0.4,9000
-malikwillis,GB,QB,66,QB66,0.0,9000
-seanclifford,GB,QB,76,QB76,0.0,9000
-willgrier,PHI,QB,91,QB91,0.0,9000
-saquonbarkley,PHI,RB,4,RB4,17.0,14100
-joshjacobs,GB,RB,13,RB13,14.8,12300
-kennethgainwell,PHI,RB,60,RB60,4.3,5100
-emanuelwilson,GB,RB,68,RB68,3.1,3600
-willshipley,PHI,RB,72,RB72,2.1,3000
-ellismerriweather,GB,RB,118,RB118,0.1,300
-tyriondavisprice,PHI,RB,133,RB133,0.0,300
-ajbrown,PHI,WR,5,WR5,17.9,16500
-devontasmith,PHI,WR,23,WR23,14.2,13500
-jaydenreed,GB,WR,36,WR36,12.3,9600
-christianwatson,GB,WR,40,WR40,11.5,8400
-romeodoubs,GB,WR,51,WR51,10.5,10200
-dontayvionwicks,GB,WR,64,WR64,8.3,8100
-jahandotson,PHI,WR,79,WR79,6.0,4800
-bomelton,GB,WR,132,WR132,1.5,1800
-johnnywilson,PHI,WR,139,WR139,1.0,2400
-parriscampbell,PHI,WR,172,WR172,0.3,300
-britaincovey,PHI,WR,183,WR183,0.2,600
-dallasgoedert,PHI,TE,11,TE11,10.3,8700
-lukemusgrave,GB,TE,20,TE20,7.5,6900
-tuckerkraft,GB,TE,30,TE30,5.1,4200
-grantcalcaterra,PHI,TE,74,TE74,1.1,1500
-bensims,GB,TE,89,TE89,0.8,300
-messiahswinson,CAR,TE,105,TE105,0.2,300
+player_name,original_name,player_position,player_position_id,player_team,player_team_id,pos_rank,projected_points,rank_ecr,salary
+aaronjones,Aaron Jones,RB,RB,MIN,MIN,RB18,13.3,18.0,6500.0
+aaronrodgers,,,QB,,NYJ,QB23,16.0,23.0,
+aaronshampklin,Aaron Shampklin,RB,,PIT,,,0.0,,4000.0
+adamfroman,,,QB,,ATL,QB96,0.0,96.0,
+adamprentice,Adam Prentice,RB,RB,NO,NO,RB112,0.2,112.0,4000.0
+adamthielen,Adam Thielen,WR,WR,CAR,CAR,WR56,10.2,56.0,5200.0
+adamtrautman,,,TE,,DEN,TE46,2.8,46.0,
+adonaimitchell,Adonai Mitchell,WR,WR,IND,IND,WR65,8.0,65.0,3800.0
+adrianmartinez,,,QB,,NYJ,QB97,0.0,97.0,
+aidanoconnell,,,QB,,LV,QB35,0.6,35.0,
+ajbarner,,,TE,,SEA,TE79,1.0,79.0,
+ajbrown,,,WR,,PHI,WR5,17.5,5.0,
+alecingold,Alec Ingold,RB,RB,MIA,MIA,RB99,0.7,99.0,4000.0
+alecpierce,Alec Pierce,WR,WR,IND,IND,WR86,5.4,86.0,4000.0
+alexandermattison,,,RB,,LV,RB54,5.3,54.0,
+allenlazard,,,WR,,NYJ,WR90,5.1,90.0,
+allenrobinsonii,Allen Robinson II,WR,WR,NYG,DET,WR187,0.1,187.0,3000.0
+alvinkamara,Alvin Kamara,RB,RB,NO,NO,RB10,15.1,10.0,6700.0
+amaricooper,,,WR,,CLE,WR24,14.0,24.0,
+ameerabdullah,,,RB,,LV,RB86,1.1,86.0,
+amonrastbrown,,,WR,,DET,WR1,20.8,1.0,
+andrebaccellia,Andre Baccellia,WR,,ARI,,,0.0,,3000.0
+andreiiosivas,Andrei Iosivas,WR,WR,CIN,CIN,WR70,7.5,70.0,3000.0
+andrewbeck,Andrew Beck,RB,,HOU,,,0.0,,4000.0
+andrewdepaola,Andrew DePaola,TE,,MIN,,,0.0,,2500.0
+andydalton,Andy Dalton,QB,QB,CAR,CAR,QB53,0.4,53.0,4800.0
+andyisabella,Andy Isabella,WR,,BUF,,,0.0,,3000.0
+anthonybrownjr,Anthony Brown Jr.,QB,,BUF,,,0.0,,4000.0
+anthonygould,Anthony Gould,WR,WR,IND,IND,WR152,0.6,152.0,3000.0
+anthonyrichardson,Anthony Richardson,QB,QB,IND,IND,QB5,19.8,5.0,6300.0
+anthonyschwartz,Anthony Schwartz,WR,,MIA,,,0.0,,3000.0
+antoniogibson,Antonio Gibson,RB,RB,NE,NE,RB42,8.1,42.0,4900.0
+arizonacardinals,,,DST,,ARI,DST32,4.8,32.0,
+ashtondulin,Ashton Dulin,WR,WR,IND,IND,WR148,0.7,148.0,3000.0
+atlantafalcons,,,DST,,ATL,DST13,6.8,13.0,
+atperry,A.T. Perry,WR,WR,NO,NO,WR101,4.5,101.0,3600.0
+audricestime,,,RB,,DEN,RB68,2.6,68.0,
+austinekeler,,,RB,,WAS,RB33,10.6,33.0,
+austinhooper,Austin Hooper,TE,TE,NE,NE,TE44,3.0,44.0,3100.0
+austinmack,Austin Mack,WR,,ATL,,,0.0,,3000.0
+austinreed,Austin Reed,QB,,CHI,,,0.0,,4000.0
+austinstogner,Austin Stogner,TE,,ATL,,,0.0,,2500.0
+austintrammell,Austin Trammell,WR,,JAX,,,0.0,,3000.0
+averywilliams,Avery Williams,RB,RB,ATL,ATL,RB109,0.2,109.0,4000.0
+ayirasante,Ayir Asante,WR,,NYG,,,0.0,,3000.0
+baileyzappe,Bailey Zappe,QB,QB,NE,KC,QB101,0.0,101.0,4000.0
+bakermayfield,,,QB,,TB,QB17,17.2,17.0,
+baltimoreravens,,,DST,,BAL,DST21,6.0,21.0,
+bears,Bears,DST,,CHI,,,0.0,,3400.0
+benchappell,,,QB,,WAS,QB100,0.0,100.0,
+bengals,Bengals,DST,,CIN,,,0.0,,3800.0
+bensims,,,TE,,GB,TE86,0.8,86.0,
+bensinnott,,,TE,,WAS,TE32,5.0,32.0,
+benskowronek,Ben Skowronek,WR,,PIT,,,0.0,,3000.0
+bernhardseikovits,Bernhard Seikovits,TE,,ARI,,,0.0,,2500.0
+bijanrobinson,Bijan Robinson,RB,RB,ATL,ATL,RB2,18.5,2.0,7700.0
+bills,Bills,DST,,BUF,,,0.0,,3000.0
+blainegabbert,,,QB,,FA,QB79,0.0,79.0,
+blakecorum,,,RB,,LAR,RB45,7.1,45.0,
+blakewatson,,,RB,,DEN,RB90,1.0,90.0,
+bomelton,,,WR,,GB,WR131,1.7,131.0,
+bonix,,,QB,,DEN,QB29,14.3,29.0,
+bostonscott,Boston Scott,RB,RB,PIT,PIT,RB122,0.0,122.0,4000.0
+bradyrussell,,,TE,,SEA,TE88,0.8,88.0,
+braelonallen,,,RB,,NYJ,RB63,3.5,63.0,
+brandincooks,,,WR,,DAL,WR58,9.6,58.0,
+brandonaiyuk,,,WR,,SF,WR28,13.4,28.0,
+brandonallen,,,QB,,SF,QB58,0.3,58.0,
+brandonjohnson,,,WR,,PIT,WR183,0.1,183.0,
+brandonpowell,Brandon Powell,WR,WR,MIN,MIN,WR128,2.0,128.0,3200.0
+braxtonberrios,Braxton Berrios,WR,WR,MIA,MIA,WR111,3.5,111.0,3000.0
+braylonsanders,Braylon Sanders,WR,,MIA,,,0.0,,3000.0
+breecehall,,,RB,,NYJ,RB3,18.1,3.0,
+brendenbates,Brenden Bates,TE,TE,CHI,NYJ,TE96,0.6,96.0,2500.0
+brendenrice,,,WR,,LAC,WR122,2.5,122.0,
+brentonstrange,Brenton Strange,TE,TE,JAX,JAC,TE73,1.1,73.0,2500.0
+brettrypien,Brett Rypien,QB,QB,MIN,MIN,QB83,0.0,83.0,4000.0
+brevineaston,Brevin Easton,WR,,JAX,,,0.0,,3000.0
+brevinjordan,Brevin Jordan,TE,TE,HOU,HOU,TE51,2.4,51.0,2800.0
+brevynspannford,,,TE,,DAL,TE101,0.5,101.0,
+brianrobinsonjr,,,RB,,WAS,RB31,11.1,31.0,
+brianthomasjr,Brian Thomas Jr.,WR,WR,JAX,JAC,WR42,11.1,42.0,4700.0
+britaincovey,,,WR,,PHI,WR182,0.1,182.0,
+britishbrooks,British Brooks,RB,RB,HOU,HOU,RB132,0.0,132.0,4000.0
+brockbowers,,,TE,,LV,TE12,9.7,12.0,
+brockpurdy,,,QB,,SF,QB18,17.1,18.0,
+brockwright,,,TE,,DET,TE57,2.1,57.0,
+bryanthompson,Bryan Thompson,WR,,BUF,,,0.0,,3000.0
+brycefordwheaton,Bryce Ford-Wheaton,WR,WR,NYG,NYG,WR169,0.4,169.0,3000.0
+bryceoliver,Bryce Oliver,WR,,TEN,,,0.0,,3000.0
+bryceyoung,Bryce Young,QB,QB,CAR,CAR,QB28,14.6,28.0,5200.0
+bubmeans,Bub Means,WR,WR,NO,NO,WR139,1.3,139.0,3000.0
+buckyirving,,,RB,,TB,RB52,5.7,52.0,
+buffalobills,,,DST,,BUF,DST14,6.6,14.0,
+byronpringle,,,WR,,FA,WR179,0.2,179.0,
+cadeotton,,,TE,,TB,TE18,7.7,18.0,
+cadestover,Cade Stover,TE,TE,HOU,HOU,TE65,1.7,65.0,2500.0
+caladomitis,Cal Adomitis,TE,,CIN,,,0.0,,2500.0
+calebwilliams,Caleb Williams,QB,QB,CHI,CHI,QB14,17.6,14.0,5900.0
+calvinaustiniii,Calvin Austin III,WR,WR,PIT,PIT,WR110,3.6,110.0,3100.0
+calvinridley,Calvin Ridley,WR,WR,TEN,TEN,WR35,12.3,35.0,5800.0
+camakers,Cam Akers,RB,RB,HOU,HOU,RB74,1.9,74.0,4300.0
+cameronlatu,,,TE,,CLE,TE110,0.0,110.0,
+camgrandy,Cam Grandy,TE,,CIN,,,0.0,,2500.0
+camsims,Cam Sims,WR,,CAR,,,0.0,,3000.0
+cardinals,Cardinals,DST,,ARI,,,0.0,,2400.0
+carloswashingtonjr,Carlos Washington Jr.,RB,,ATL,,,0.0,,4000.0
+carolinapanthers,,,DST,,CAR,DST26,5.7,26.0,
+carsonsteele,,,RB,,KC,RB79,1.4,79.0,
+carsonwentz,,,QB,,KC,QB46,0.4,46.0,
+carterbradley,,,QB,,LV,QB81,0.0,81.0,
+casekeenum,Case Keenum,QB,,HOU,,,0.0,,4000.0
+caseywashington,Casey Washington,WR,WR,ATL,ATL,WR145,0.9,145.0,3000.0
+cedrickwilsonjr,Cedrick Wilson Jr.,WR,WR,NO,NO,WR116,3.0,116.0,3700.0
+cedrictillman,,,WR,,CLE,WR99,4.5,99.0,
+ceedeelamb,,,WR,,DAL,WR4,18.7,4.0,
+charliejones,Charlie Jones,WR,WR,CIN,CIN,WR132,1.6,132.0,3000.0
+charliekolar,,,TE,,BAL,TE85,0.9,85.0,
+charliewoerner,Charlie Woerner,TE,TE,ATL,ATL,TE67,1.6,67.0,2500.0
+chasebrown,Chase Brown,RB,RB,CIN,CIN,RB34,10.3,34.0,5000.0
+chaseclaypool,Chase Claypool,WR,,BUF,,,0.0,,3000.0
+chasecota,Chase Cota,WR,,NYG,,,0.0,,3000.0
+chicagobears,,,DST,,CHI,DST3,8.1,3.0,
+chigokonkwo,Chig Okonkwo,TE,TE,TEN,TEN,TE27,6.1,27.0,3900.0
+chrisblair,Chris Blair,WR,,ATL,,,0.0,,3000.0
+chrisbrooks,Chris Brooks,RB,,MIA,,,0.0,,4000.0
+chrisconley,,,WR,,SF,WR162,0.5,162.0,
+chrisevans,Chris Evans,RB,,CIN,,,0.0,,4200.0
+chrisgodwin,,,WR,,TB,WR27,13.7,27.0,
+chrismanhertz,Chris Manhertz,TE,TE,NYG,NYG,TE74,1.1,74.0,2500.0
+chrismoore,Chris Moore,WR,WR,ARI,ARI,WR142,1.0,142.0,3000.0
+chrisolave,Chris Olave,WR,WR,NO,NO,WR13,15.3,13.0,6600.0
+chrisrodriguezjr,,,RB,,WAS,RB92,0.9,92.0,
+christiankirk,Christian Kirk,WR,WR,JAX,JAC,WR31,13.3,31.0,5500.0
+christianmccaffrey,,,RB,,SF,RB1,21.3,1.0,
+christianwatson,,,WR,,GB,WR40,11.6,40.0,
+chubahubbard,Chuba Hubbard,RB,RB,CAR,CAR,RB29,11.3,29.0,5300.0
+cincinnatibengals,,,DST,,CIN,DST1,8.7,1.0,
+cjbeathard,C.J. Beathard,QB,QB,JAX,FA,QB92,0.0,92.0,4000.0
+cjham,C.J. Ham,RB,RB,MIN,MIN,RB100,0.6,100.0,4000.0
+cjstroud,C.J. Stroud,QB,QB,HOU,HOU,QB6,19.4,6.0,7500.0
+claytontune,Clayton Tune,QB,QB,ARI,ARI,QB59,0.2,59.0,4000.0
+clevelandbrowns,,,DST,,CLE,DST8,7.6,8.0,
+codyschrader,,,RB,,LAR,RB96,0.8,96.0,
+colbyparkinson,,,TE,,LAR,TE24,6.7,24.0,
+coleburgess,Cole Burgess,WR,,CIN,,,0.0,,3000.0
+colefotheringham,Cole Fotheringham,TE,,HOU,,,0.0,,2500.0
+colekmet,Cole Kmet,TE,TE,CHI,CHI,TE19,7.5,19.0,4100.0
+coleturner,,,TE,,WAS,TE112,0.0,112.0,
+collinjohnson,Collin Johnson,WR,WR,CHI,CHI,WR201,0.0,201.0,3000.0
+colsonyankoff,,,TE,,WAS,TE108,0.1,108.0,
+coltondowell,Colton Dowell,WR,,TEN,,,0.0,,3000.0
+colts,Colts,DST,,IND,,,0.0,,2600.0
+connorheyward,Connor Heyward,TE,TE,PIT,PIT,TE68,1.6,68.0,2500.0
+cooperkupp,,,WR,,LAR,WR11,15.6,11.0,
+cooperrush,,,QB,,DAL,QB60,0.2,60.0,
+cordarrellepatterson,Cordarrelle Patterson,RB,RB,PIT,PIT,RB66,3.1,66.0,4500.0
+courtlandsutton,,,WR,,DEN,WR38,11.9,38.0,
+craigreynolds,,,RB,,DET,RB93,0.9,93.0,
+curtissamuel,Curtis Samuel,WR,WR,BUF,BUF,WR54,10.2,54.0,4900.0
+daijunedwards,Daijun Edwards,RB,,PIT,,,0.0,,4000.0
+dakprescott,,,QB,,DAL,QB16,17.4,16.0,
+dallascowboys,,,DST,,DAL,DST6,7.8,6.0,
+dallasgoedert,,,TE,,PHI,TE11,10.3,11.0,
+dallinholker,Dallin Holker,TE,,NO,,,0.0,,2500.0
+daltonkeene,Dalton Keene,TE,,HOU,,,0.0,,2500.0
+daltonkincaid,Dalton Kincaid,TE,TE,BUF,BUF,TE4,12.9,4.0,5800.0
+daltonschultz,Dalton Schultz,TE,TE,HOU,HOU,TE13,9.3,13.0,4900.0
+dalvincook,,,RB,,DAL,RB83,1.2,83.0,
+dameonpierce,Dameon Pierce,RB,RB,HOU,HOU,RB64,3.4,64.0,4600.0
+damierebyrd,Damiere Byrd,WR,,BUF,,,0.0,,3000.0
+danchisena,Dan Chisena,WR,,ARI,,,0.0,,3000.0
+dandreswift,D'Andre Swift,RB,RB,CHI,CHI,RB24,11.9,24.0,6000.0
+danielarias,Daniel Arias,WR,,ARI,,,0.0,,3000.0
+danielbellinger,Daniel Bellinger,TE,TE,NYG,NYG,TE40,4.1,40.0,3000.0
+danieljones,Daniel Jones,QB,QB,NYG,NYG,QB24,15.8,24.0,5400.0
+dantemiller,Dante Miller,RB,RB,NYG,NYG,RB133,0.0,133.0,4000.0
+dantepettis,Dante Pettis,WR,,CHI,,,0.0,,3000.0
+darekeyoung,,,WR,,SEA,WR180,0.2,180.0,
+dareogunbowale,Dare Ogunbowale,RB,RB,HOU,HOU,RB104,0.5,104.0,4000.0
+dariusslayton,Darius Slayton,WR,WR,NYG,NYG,WR75,7.1,75.0,4400.0
+darnellmooney,Darnell Mooney,WR,WR,ATL,ATL,WR60,9.3,60.0,4200.0
+darnellwashington,Darnell Washington,TE,TE,PIT,PIT,TE50,2.4,50.0,2500.0
+darryntonevans,Darrynton Evans,RB,,BUF,,,0.0,,4000.0
+davanteadams,,,WR,,LV,WR9,15.8,9.0,
+davidbell,,,WR,,FA,WR181,0.2,181.0,
+davidmartinrobinson,David Martin-Robinson,TE,TE,TEN,TEN,TE111,0.0,111.0,2500.0
+davidmontgomery,,,RB,,DET,RB22,12.6,22.0,
+davidmoore,David Moore,WR,WR,CAR,CAR,WR159,0.5,159.0,3000.0
+davidnjoku,,,TE,,CLE,TE9,11.1,9.0,
+davidwallis,David Wallis,WR,,NE,,,0.0,,3000.0
+davidwhitejr,David White Jr.,WR,,JAX,,,0.0,,3000.0
+davisallen,,,TE,,LAR,TE54,2.2,54.0,
+davismills,Davis Mills,QB,QB,HOU,HOU,QB56,0.4,56.0,4700.0
+dawsonknox,Dawson Knox,TE,TE,BUF,BUF,TE33,4.9,33.0,3400.0
+daylenbaldwin,Daylen Baldwin,WR,,ARI,,,0.0,,3000.0
+deandrecarter,DeAndre Carter,WR,WR,CHI,CHI,WR165,0.5,165.0,3000.0
+deandrehopkins,DeAndre Hopkins,WR,WR,TEN,TEN,WR41,11.4,41.0,5700.0
+deebosamuelsr,,,WR,,SF,WR20,14.5,20.0,
+deeeskridge,Dee Eskridge,WR,WR,MIA,MIA,WR197,0.1,197.0,3000.0
+deejaydallas,DeeJay Dallas,RB,RB,ARI,ARI,RB87,1.1,87.0,4000.0
+demarcusrobinson,,,WR,,LAR,WR68,7.7,68.0,
+demariodouglas,DeMario Douglas,WR,WR,NE,NE,WR59,9.5,59.0,4800.0
+denericprince,Deneric Prince,RB,RB,MIA,MIA,RB129,0.0,129.0,4000.0
+dennishouston,Dennis Houston,WR,,NYG,,,0.0,,3000.0
+denverbroncos,,,DST,,DEN,DST24,5.8,24.0,
+denzelmims,Denzel Mims,WR,,JAX,,,0.0,,3000.0
+deoncain,Deon Cain,WR,,CAR,,,0.0,,3000.0
+deonteharty,,,WR,,BAL,WR149,0.6,149.0,
+derekcarr,Derek Carr,QB,QB,NO,NO,QB27,14.9,27.0,5300.0
+derekslywka,Derek Slywka,WR,,IND,,,0.0,,3000.0
+deriusdavis,,,WR,,LAC,WR135,1.4,135.0,
+dernestjohnson,D'Ernest Johnson,RB,RB,JAX,JAC,RB78,1.6,78.0,4700.0
+derrickhenry,,,RB,,BAL,RB15,14.7,15.0,
+deshaunfenwick,Deshaun Fenwick,RB,,NE,,,0.0,,4000.0
+deshaunwatson,,,QB,,CLE,QB22,16.3,22.0,
+desmondridder,Desmond Ridder,QB,QB,ARI,ARI,QB78,0.0,78.0,4800.0
+detroitlions,,,DST,,DET,DST18,6.1,18.0,
+deucevaughn,,,RB,,DAL,RB76,1.9,76.0,
+devaughnvele,,,WR,,DEN,WR134,1.6,134.0,
+devincarter,Devin Carter,WR,,CAR,,,0.0,,3000.0
+devinculp,,,TE,,TB,TE105,0.2,105.0,
+devinduvernay,Devin Duvernay,WR,WR,JAX,JAC,WR150,0.6,150.0,3000.0
+devinleary,,,QB,,BAL,QB87,0.0,87.0,
+devinsingletary,Devin Singletary,RB,RB,NYG,NYG,RB27,11.6,27.0,5700.0
+devonachane,De'Von Achane,RB,RB,MIA,MIA,RB9,15.6,9.0,6800.0
+devontasmith,,,WR,,PHI,WR23,14.2,23.0,
+dewaynemcbride,DeWayne McBride,RB,,MIN,,,0.0,,4000.0
+dezfitzpatrick,Dez Fitzpatrick,WR,,PIT,,,0.0,,3000.0
+diontaejohnson,Diontae Johnson,WR,WR,CAR,CAR,WR33,12.9,33.0,5300.0
+djcharkjr,,,WR,,LAC,WR106,4.1,106.0,
+djmontgomery,D.J. Montgomery,WR,WR,IND,IND,WR190,0.1,190.0,3000.0
+djmoore,DJ Moore,WR,WR,CHI,CHI,WR22,14.5,22.0,6500.0
+djturner,,,WR,,LV,WR155,0.6,155.0,
+dkmetcalf,,,WR,,SEA,WR21,14.5,21.0,
+dolphins,Dolphins,DST,,MIA,,,0.0,,3200.0
+donovanpeoplesjones,,,WR,,DET,WR172,0.3,172.0,
+dontaforeman,,,RB,,CLE,RB56,4.9,56.0,
+dontayvionwicks,,,WR,,GB,WR64,8.3,64.0,
+dorianthompsonrobinson,,,QB,,CLE,QB73,0.0,73.0,
+drakelondon,Drake London,WR,WR,ATL,ATL,WR16,15.1,16.0,6000.0
+drakemaye,Drake Maye,QB,QB,NE,NE,QB34,0.6,34.0,5000.0
+drewlock,Drew Lock,QB,QB,NYG,NYG,QB41,0.4,41.0,4800.0
+drewogletree,Drew Ogletree,TE,TE,IND,IND,TE62,1.8,62.0,2500.0
+drewsample,Drew Sample,TE,TE,CIN,CIN,TE56,2.1,56.0,2700.0
+duecewatts,Duece Watts,WR,,PIT,,,0.0,,3000.0
+durhamsmythe,Durham Smythe,TE,TE,MIA,MIA,TE53,2.3,53.0,3200.0
+dyamibrown,,,WR,,WAS,WR96,4.6,96.0,
+dylandrummond,Dylan Drummond,WR,,ATL,,,0.0,,3000.0
+dylanlaube,,,RB,,LV,RB70,2.1,70.0,
+eastonstick,,,QB,,LAC,QB64,0.0,64.0,
+elijahcollins,Elijah Collins,RB,,CIN,,,0.0,,4000.0
+elijahcooks,Elijah Cooks,WR,WR,JAX,JAC,WR200,0.0,200.0,3000.0
+elijahhiggins,Elijah Higgins,TE,TE,ARI,ARI,TE58,2.0,58.0,2800.0
+elijahmoore,,,WR,,CLE,WR83,5.9,83.0,
+ellismerriweather,,,RB,,GB,RB117,0.1,117.0,
+emanuelwilson,,,RB,,GB,RB65,3.3,65.0,
+emaridemercado,Emari Demercado,RB,RB,ARI,ARI,RB77,1.7,77.0,4000.0
+equanimeousstbrown,Equanimeous St. Brown,WR,WR,NO,NO,WR195,0.1,195.0,3000.0
+ericgray,Eric Gray,RB,RB,NYG,NYG,RB73,1.9,73.0,4500.0
+erickalljr,Erick All Jr.,TE,TE,CIN,CIN,TE63,1.7,63.0,2500.0
+ericsaubert,,,TE,,SF,TE81,1.0,81.0,
+erikezukanma,Erik Ezukanma,WR,,MIA,,,0.0,,3000.0
+ethanfernea,Ethan Fernea,WR,,IND,,,0.0,,3000.0
+evanengram,Evan Engram,TE,TE,JAX,JAC,TE6,12.6,6.0,5500.0
+evanhull,Evan Hull,RB,RB,IND,IND,RB89,1.1,89.0,4400.0
+ezekielelliott,,,RB,,DAL,RB38,9.3,38.0,
+falcons,Falcons,DST,,ATL,,,0.0,,3300.0
+feleipefranks,Feleipe Franks,TE,QB,CAR,CAR,QB95,0.0,95.0,2500.0
+fostermoreau,Foster Moreau,TE,TE,NO,NO,TE48,2.8,48.0,2500.0
+frankgorejr,Frank Gore Jr.,RB,RB,BUF,BUF,RB126,0.0,126.0,4000.0
+freddieswain,Freddie Swain,WR,,CHI,,,0.0,,3000.0
+gabedavis,Gabe Davis,WR,WR,JAX,JAC,WR55,10.2,55.0,4500.0
+gardnerminshewii,,,QB,,LV,QB30,14.0,30.0,
+garrettwilson,,,WR,,NYJ,WR6,17.3,6.0,
+garybrightwell,,,RB,,CLE,RB128,0.0,128.0,
+gavinhardison,Gavin Hardison,QB,,MIA,,,0.0,,4000.0
+genosmith,,,QB,,SEA,QB19,16.9,19.0,
+georgekittle,,,TE,,SF,TE8,11.1,8.0,
+georgepickens,George Pickens,WR,WR,PIT,PIT,WR29,13.4,29.0,5700.0
+geraldeverett,Gerald Everett,TE,TE,CHI,CHI,TE35,4.8,35.0,3400.0
+giants,Giants,DST,,NYG,,,0.0,,3300.0
+grantcalcaterra,,,TE,,PHI,TE72,1.2,72.0,
+grantdubose,Grant DuBose,WR,WR,MIA,MIA,WR158,0.5,158.0,3000.0
+greenbaypackers,,,DST,,GB,DST27,5.7,27.0,
+gregdortch,Greg Dortch,WR,WR,ARI,ARI,WR71,7.5,71.0,3900.0
+gregdulcich,,,TE,,DEN,TE26,6.1,26.0,
+gunnerolszewski,Gunner Olszewski,WR,WR,NYG,NYG,WR178,0.2,178.0,3000.0
+gusedwards,,,RB,,LAC,RB37,9.3,37.0,
+harrisonbryant,,,TE,,LV,TE76,1.0,76.0,
+hassanhaskins,,,RB,,LAC,RB119,0.1,119.0,
+haydenhurst,,,TE,,LAC,TE37,4.7,37.0,
+haydenrucci,Hayden Rucci,TE,,MIA,,,0.0,,2500.0
+hendonhooker,,,QB,,DET,QB51,0.4,51.0,
+houstontexans,,,DST,,HOU,DST15,6.6,15.0,
+hunterhenry,Hunter Henry,TE,TE,NE,NE,TE15,7.8,15.0,4200.0
+hunterlong,,,TE,,LAR,TE82,1.0,82.0,
+hunterluepke,,,RB,,DAL,RB113,0.2,113.0,
+ianthomas,Ian Thomas,TE,TE,CAR,CAR,TE97,0.6,97.0,2500.0
+ianwheeler,Ian Wheeler,RB,,CHI,,,0.0,,4000.0
+ihmirsmithmarsette,Ihmir Smith-Marsette,WR,,CAR,,,0.0,,3000.0
+indianapoliscolts,,,DST,,IND,DST29,5.4,29.0,
+irvincharles,,,WR,,NYJ,WR184,0.1,184.0,
+irvsmithjr,,,TE,,FA,TE102,0.3,102.0,
+isaacguerendo,,,RB,,SF,RB80,1.3,80.0,
+isaiahdavis,,,RB,,NYJ,RB82,1.2,82.0,
+isaiahhodgins,Isaiah Hodgins,WR,,NYG,,,0.0,,3000.0
+isaiahlikely,,,TE,,BAL,TE28,5.7,28.0,
+isaiahmckenzie,Isaiah McKenzie,WR,,NYG,,,0.0,,3000.0
+isaiahwilliams,,,WR,,DET,WR141,1.1,141.0,
+isiahpacheco,,,RB,,KC,RB16,14.3,16.0,
+israelabanikanda,,,RB,,NYJ,RB84,1.1,84.0,
+jabarismall,Jabari Small,RB,,TEN,,,0.0,,4000.0
+jackcolletto,Jack Colletto,RB,,PIT,,,0.0,,4000.0
+jackplummer,Jack Plummer,QB,,CAR,,,0.0,,4000.0
+jacksonvillejaguars,,,DST,,JAC,DST28,5.6,28.0,
+jackstoll,Jack Stoll,TE,,NYG,,,0.0,,2500.0
+jacobcopeland,Jacob Copeland,WR,,PIT,,,0.0,,3000.0
+jacobcowing,,,WR,,SF,WR104,4.3,104.0,
+jacobkibodi,Jacob Kibodi,RB,,NO,,,0.0,,4000.0
+jacobsaylors,Jacob Saylors,RB,,NYG,,,0.0,,4000.0
+jacobwarren,Jacob Warren,TE,,NE,,,0.0,,2500.0
+jacobybrissett,Jacoby Brissett,QB,QB,NE,NE,QB31,13.7,31.0,5100.0
+jadenshirden,Jaden Shirden,RB,,CAR,,,0.0,,4000.0
+jadonjanke,Jadon Janke,WR,,MIA,,,0.0,,3000.0
+jaguars,Jaguars,DST,,JAX,,,0.0,,2700.0
+jahandotson,,,WR,,PHI,WR79,6.3,79.0,
+jaheimbell,Jaheim Bell,TE,TE,NE,NE,TE77,1.0,77.0,2500.0
+jahmyrgibbs,,,RB,,DET,RB7,16.3,7.0,
+jakebobo,,,WR,,SEA,WR124,2.4,124.0,
+jakebrowning,Jake Browning,QB,QB,CIN,CIN,QB43,0.4,43.0,5000.0
+jakeferguson,,,TE,,DAL,TE10,10.7,10.0,
+jakefromm,,,QB,,DET,QB94,0.0,94.0,
+jakehaener,Jake Haener,QB,QB,NO,NO,QB74,0.0,74.0,4600.0
+jaketonges,,,TE,,SF,TE83,0.9,83.0,
+jakobimeyers,,,WR,,LV,WR49,10.5,49.0,
+jaleelmclaughlin,,,RB,,DEN,RB40,8.8,40.0,
+jalenbrooks,,,WR,,DAL,WR136,1.5,136.0,
+jalencoker,Jalen Coker,WR,,CAR,,,0.0,,3000.0
+jalenguyton,,,WR,,LV,WR188,0.1,188.0,
+jalenhurts,,,QB,,PHI,QB2,22.5,2.0,
+jalenjackson,Jalen Jackson,RB,,JAX,,,0.0,,4000.0
+jalenmcmillan,,,WR,,TB,WR72,7.4,72.0,
+jalennailor,Jalen Nailor,WR,WR,MIN,MIN,WR109,3.6,109.0,3000.0
+jalenreagor,Jalen Reagor,WR,WR,NE,NE,WR191,0.1,191.0,3000.0
+jalentolbert,,,WR,,DAL,WR82,5.9,82.0,
+jalenvirgil,Jalen Virgil,WR,,BUF,,,0.0,,3000.0
+jalinhyatt,Jalin Hyatt,WR,WR,NYG,NYG,WR80,6.1,80.0,3100.0
+jalynnpolk,Ja'Lynn Polk,WR,WR,NE,NE,WR63,8.7,63.0,3900.0
+jamaalwilliams,Jamaal Williams,RB,RB,NO,NO,RB51,6.3,51.0,4800.0
+jamarithrash,,,WR,,CLE,WR164,0.5,164.0,
+jamarrchase,Ja'Marr Chase,WR,WR,CIN,CIN,WR8,16.9,8.0,7800.0
+jameiswinston,,,QB,,CLE,QB40,0.4,40.0,
+jamesconner,James Conner,RB,RB,ARI,ARI,RB19,13.1,19.0,6200.0
+jamescook,James Cook,RB,RB,BUF,BUF,RB12,15.0,12.0,6900.0
+jamesonwilliams,,,WR,,DET,WR50,10.5,50.0,
+jamesrobinson,James Robinson,RB,,NO,,,0.0,,4000.0
+jamisoncrowder,,,WR,,WAS,WR147,0.7,147.0,
+jamycalhasty,JaMycal Hasty,RB,RB,NE,NE,RB102,0.5,102.0,4000.0
+jaquaejackson,JaQuae Jackson,WR,,NE,,,0.0,,3000.0
+jarayjenkins,Jaray Jenkins,WR,,PIT,,,0.0,,3000.0
+jaredgoff,,,QB,,DET,QB11,18.0,11.0,
+jaredwayne,Jared Wayne,WR,,HOU,,,0.0,,3000.0
+jaredwiley,,,TE,,KC,TE78,1.0,78.0,
+jarenhall,Jaren Hall,QB,QB,MIN,SEA,QB70,0.0,70.0,4000.0
+jaretpatterson,,,RB,,LAC,RB120,0.0,120.0,
+jarrettstidham,,,QB,,DEN,QB38,0.5,38.0,
+jasemcclellan,Jase McClellan,RB,RB,ATL,ATL,RB114,0.2,114.0,4200.0
+jashauncorbin,Jashaun Corbin,RB,,NYG,,,0.0,,4000.0
+jasonbean,Jason Bean,QB,,IND,,,0.0,,4000.0
+jasonbrownlee,,,WR,,NYJ,WR194,0.1,194.0,
+jatavionsanders,Ja'Tavion Sanders,TE,TE,CAR,CAR,TE34,4.8,34.0,2500.0
+jauanjennings,,,WR,,SF,WR92,5.0,92.0,
+javonbaker,Javon Baker,WR,WR,NE,NE,WR94,5.0,94.0,3000.0
+javontewilliams,,,RB,,DEN,RB21,12.6,21.0,
+jawharjordan,Jawhar Jordan,RB,,HOU,,,0.0,,4000.0
+jaxonsmithnjigba,,,WR,,SEA,WR37,12.0,37.0,
+jaydendaniels,,,QB,,WAS,QB10,18.2,10.0,
+jaydenreed,,,WR,,GB,WR36,12.0,36.0,
+jaylenwaddle,Jaylen Waddle,WR,WR,MIA,MIA,WR15,15.2,15.0,6300.0
+jaylenwarren,Jaylen Warren,RB,RB,PIT,PIT,RB36,10.1,36.0,5600.0
+jaylenwright,Jaylen Wright,RB,RB,MIA,MIA,RB61,4.3,61.0,4000.0
+jeffdriskel,,,QB,,WAS,QB71,0.0,71.0,
+jeffsmith,Jeff Smith,WR,,ARI,,,0.0,,3000.0
+jeffwilsonjr,Jeff Wilson Jr.,RB,RB,MIA,MIA,RB85,1.1,85.0,4000.0
+jelaniwoods,Jelani Woods,TE,,IND,,,0.0,,3300.0
+jequanburton,Je'Quan Burton,WR,,MIA,,,0.0,,3000.0
+jeremymcnichols,,,RB,,WAS,RB108,0.4,108.0,
+jeremyruckert,,,TE,,NYJ,TE52,2.3,52.0,
+jermaineburton,Jermaine Burton,WR,WR,CIN,CIN,WR88,5.2,88.0,3700.0
+jermainejackson,Jermaine Jackson,WR,,NO,,,0.0,,3000.0
+jermarjefferson,,,RB,,DET,RB130,0.0,130.0,
+jeromeford,,,RB,,CLE,RB25,11.8,25.0,
+jerryjeudy,,,WR,,CLE,WR57,9.8,57.0,
+jeshaunjones,Jeshaun Jones,WR,,MIN,,,0.0,,3000.0
+jesperhorsted,Jesper Horsted,TE,,CAR,,,0.0,,2500.0
+jessematthews,Jesse Matthews,WR,,ATL,,,0.0,,3000.0
+jhaquanjackson,Jha'Quan Jackson,WR,WR,TEN,TEN,WR173,0.3,173.0,3000.0
+jjmccarthy,J.J. McCarthy,QB,,MIN,,,0.0,,5200.0
+jjtaylor,J.J. Taylor,RB,,HOU,,,0.0,,4000.0
+jkdobbins,,,RB,,LAC,RB39,9.1,39.0,
+jodyfortsonjr,Jody Fortson Jr.,TE,,MIA,,,0.0,,2500.0
+joeburrow,Joe Burrow,QB,QB,CIN,CIN,QB8,18.7,8.0,6500.0
+joeflacco,Joe Flacco,QB,QB,IND,IND,QB42,0.4,42.0,5000.0
+joemiltoniii,Joe Milton III,QB,QB,NE,NE,QB75,0.0,75.0,4000.0
+joemixon,Joe Mixon,RB,RB,HOU,HOU,RB17,14.2,17.0,6600.0
+johnbates,,,TE,,WAS,TE66,1.6,66.0,
+johnfitzpatrick,John FitzPatrick,TE,,ATL,,,0.0,,2500.0
+johnjacksoniii,John Jackson III,WR,,CHI,,,0.0,,3000.0
+johnjiles,John Jiles,WR,,NYG,,,0.0,,3000.0
+johnkellyjr,,,RB,,BAL,RB121,0.0,121.0,
+johnmetchieiii,John Metchie III,WR,WR,HOU,HOU,WR119,2.8,119.0,3000.0
+johnnyjohnsoniii,Johnny Johnson III,WR,,HOU,,,0.0,,3000.0
+johnnymundt,Johnny Mundt,TE,TE,MIN,MIN,TE38,4.5,38.0,2900.0
+johnnywilson,,,WR,,PHI,WR138,1.1,138.0,
+johnpaddock,John Paddock,QB,,ATL,,,0.0,,4000.0
+johnrhysplumlee,John Rhys Plumlee,QB,,PIT,,,0.0,,4000.0
+johnwolford,,,QB,,CAR,QB99,0.0,99.0,
+jonathanmingo,Jonathan Mingo,WR,WR,CAR,CAR,WR91,5.0,91.0,3400.0
+jonathantaylor,Jonathan Taylor,RB,RB,IND,IND,RB5,16.8,5.0,7800.0
+jonathanward,Jonathan Ward,RB,,PIT,,,0.0,,4000.0
+jonathonbrooks,Jonathon Brooks,RB,,CAR,,,0.0,,5300.0
+jonnusmith,Jonnu Smith,TE,TE,MIA,MIA,TE22,7.1,22.0,3500.0
+jordanaddison,Jordan Addison,WR,WR,MIN,MIN,WR46,11.0,46.0,5300.0
+jordanakins,,,TE,,CLE,TE60,2.0,60.0,
+jordanlove,,,QB,,GB,QB9,18.4,9.0,
+jordanmason,,,RB,,SF,RB59,4.5,59.0,
+jordanmatthews,Jordan Matthews,TE,WR,CAR,CAR,WR174,0.3,174.0,2500.0
+jordanmims,Jordan Mims,RB,RB,NO,NO,RB106,0.4,106.0,4000.0
+jordanmurray,Jordan Murray,TE,,IND,,,0.0,,2500.0
+jordanwhittington,,,WR,,LAR,WR120,2.6,120.0,
+josephscates,Joseph Scates,WR,,JAX,,,0.0,,3000.0
+joshali,Josh Ali,WR,,ATL,,,0.0,,3000.0
+joshallen,Josh Allen,QB,QB,BUF,BUF,QB1,24.9,1.0,8000.0
+joshdowns,Josh Downs,WR,,IND,,,0.0,,4800.0
+joshjacobs,,,RB,,GB,RB13,14.8,13.0,
+joshjohnson,,,QB,,BAL,QB45,0.4,45.0,
+josholiver,Josh Oliver,TE,TE,MIN,MIN,TE42,3.8,42.0,3300.0
+joshpederson,Josh Pederson,TE,,JAX,,,0.0,,2500.0
+joshreynolds,,,WR,,DEN,WR77,6.8,77.0,
+joshuacephus,Joshua Cephus,WR,,JAX,,,0.0,,3000.0
+joshuadobbs,,,QB,,SF,QB52,0.4,52.0,
+joshuapalmer,,,WR,,LAC,WR43,11.1,43.0,
+joshwhyle,Josh Whyle,TE,TE,TEN,TEN,TE49,2.8,49.0,2500.0
+josiahdeguara,Josiah Deguara,TE,,JAX,,,0.0,,2500.0
+jujusmithschuster,JuJu Smith-Schuster,WR,WR,NE,KC,WR118,2.9,118.0,3500.0
+julianhill,Julian Hill,TE,TE,MIA,MIA,TE75,1.0,75.0,2500.0
+juliuschestnut,Julius Chestnut,RB,RB,TEN,TEN,RB115,0.2,115.0,4000.0
+justicehill,,,RB,,BAL,RB53,5.6,53.0,
+justinfields,Justin Fields,QB,QB,PIT,PIT,QB33,0.7,33.0,5000.0
+justinherbert,,,QB,,LAC,QB20,16.7,20.0,
+justinjefferson,Justin Jefferson,WR,WR,MIN,MIN,WR3,18.8,3.0,8400.0
+justinwatson,,,WR,,KC,WR108,3.8,108.0,
+justynross,,,WR,,KC,WR189,0.1,189.0,
+juwanjohnson,Juwan Johnson,TE,TE,NO,NO,TE25,6.2,25.0,3700.0
+juwannwinfree,Juwann Winfree,WR,,IND,,,0.0,,3000.0
+kalifraymond,,,WR,,DET,WR102,4.4,102.0,
+kameronjohnson,,,WR,,TB,WR167,0.4,167.0,
+kansascitychiefs,,,DST,,KC,DST16,6.5,16.0,
+kavontaeturpin,,,WR,,DAL,WR127,2.1,127.0,
+kawaanbaker,Kawaan Baker,WR,,NE,,,0.0,,3000.0
+kayshonboutte,Kayshon Boutte,WR,WR,NE,NE,WR154,0.6,154.0,3000.0
+keaontayingram,,,RB,,KC,RB124,0.0,124.0,
+kearisjackson,Kearis Jackson,WR,,TEN,,,0.0,,3000.0
+kedonslovis,Kedon Slovis,QB,,HOU,,,0.0,,4000.0
+keenanallen,Keenan Allen,WR,WR,CHI,CHI,WR34,12.5,34.0,6900.0
+keilanrobinson,Keilan Robinson,RB,,JAX,,,0.0,,4000.0
+kendallmilton,Kendall Milton,RB,RB,CIN,CIN,RB97,0.8,97.0,4000.0
+kendremiller,Kendre Miller,RB,,NO,,,0.0,,4600.0
+kendrickbourne,Kendrick Bourne,WR,,NE,,,0.0,,4300.0
+kendricpryor,Kendric Pryor,WR,,CIN,,,0.0,,3000.0
+kenenwangwu,Kene Nwangwu,RB,,MIN,,,0.0,,4400.0
+kennethgainwell,,,RB,,PHI,RB60,4.3,60.0,
+kennethwalkeriii,,,RB,,SEA,RB14,14.8,14.0,
+kennymcintosh,,,RB,,SEA,RB101,0.5,101.0,
+kennypickett,,,QB,,PHI,QB49,0.4,49.0,
+keoncoleman,Keon Coleman,WR,WR,BUF,BUF,WR52,10.4,52.0,5000.0
+kevinaustinjr,Kevin Austin Jr.,WR,,NO,,,0.0,,3000.0
+kevinharris,Kevin Harris,RB,,NE,,,0.0,,4100.0
+kevinrader,Kevin Rader,TE,,NO,,,0.0,,2500.0
+khadarelhodge,KhaDarel Hodge,WR,WR,ATL,ATL,WR129,2.1,129.0,3100.0
+khalilherbert,Khalil Herbert,RB,RB,CHI,CHI,RB47,6.8,47.0,5200.0
+khalilshakir,Khalil Shakir,WR,WR,BUF,BUF,WR47,10.8,47.0,5100.0
+khariblasingame,Khari Blasingame,RB,RB,CHI,CHI,RB118,0.1,118.0,4000.0
+kimanividal,,,RB,,LAC,RB67,3.1,67.0,
+kirkcousins,Kirk Cousins,QB,QB,ATL,ATL,QB21,16.6,21.0,6100.0
+kjhamler,KJ Hamler,WR,,BUF,,,0.0,,3000.0
+kjosborn,K.J. Osborn,WR,WR,NE,NE,WR85,5.4,85.0,3500.0
+kokieft,,,TE,,TB,TE91,0.7,91.0,
+kwamielassiterii,Kwamie Lassiter II,WR,,CIN,,,0.0,,3000.0
+kyleallen,Kyle Allen,QB,QB,PIT,PIT,QB80,0.0,80.0,4000.0
+kylejuszczyk,,,RB,,SF,RB88,1.1,88.0,
+kylengranson,Kylen Granson,TE,TE,IND,IND,TE36,4.8,36.0,2900.0
+kylephilips,Kyle Philips,WR,,TEN,,,0.0,,3000.0
+kylepitts,Kyle Pitts,TE,TE,ATL,ATL,TE7,12.0,7.0,4600.0
+kylermurray,Kyler Murray,QB,QB,ARI,ARI,QB7,19.0,7.0,6400.0
+kyletrask,,,QB,,TB,QB55,0.4,55.0,
+kyrenwilliams,,,RB,,LAR,RB11,15.1,11.0,
+kyricmcgowan,Kyric McGowan,WR,,MIA,,,0.0,,3000.0
+laddmcconkey,,,WR,,LAC,WR48,10.6,48.0,
+lamarjackson,,,QB,,BAL,QB4,20.5,4.0,
+lamicalperine,La'Mical Perine,RB,,PIT,,,0.0,,4200.0
+lamichaelpettway,La'Michael Pettway,TE,,NE,,,0.0,,2500.0
+laquontreadwell,Laquon Treadwell,WR,,IND,,,0.0,,3000.0
+lasvegasraiders,,,DST,,LV,DST22,5.9,22.0,
+laviskashenaultjr,,,WR,,SEA,WR161,0.5,161.0,
+lawrencecager,Lawrence Cager,TE,,NYG,,,0.0,,2500.0
+lawrencekeysiii,Lawrence Keys III,WR,,BUF,,,0.0,,3000.0
+liljordanhumphrey,,,WR,,DEN,WR185,0.1,185.0,
+loganwoodside,Logan Woodside,QB,QB,CIN,CIN,QB86,0.0,86.0,4000.0
+lorenzolingard,Lorenzo Lingard,RB,,NYG,,,0.0,,4000.0
+losangeleschargers,,,DST,,LAC,DST10,7.5,10.0,
+losangelesrams,,,DST,,LAR,DST31,5.1,31.0,
+louisreeszammit,Louis Rees-Zammit,WR,,JAX,,,0.0,,3000.0
+lucaskrull,,,TE,,DEN,TE61,1.9,61.0,
+luckyjackson,Lucky Jackson,WR,,MIN,,,0.0,,3000.0
+lukefarrell,Luke Farrell,TE,TE,JAX,JAC,TE64,1.7,64.0,2500.0
+lukemccaffrey,,,WR,,WAS,WR84,5.5,84.0,
+lukemusgrave,,,TE,,GB,TE20,7.5,20.0,
+lukeschoonmaker,,,TE,,DAL,TE59,2.0,59.0,
+macjones,Mac Jones,QB,QB,JAX,JAC,QB50,0.4,50.0,4900.0
+mackhollins,Mack Hollins,WR,WR,BUF,BUF,WR113,3.3,113.0,3000.0
+malachicorley,,,WR,,NYJ,WR93,4.7,93.0,
+malikdavis,,,RB,,DAL,RB127,0.0,127.0,
+malikknowles,Malik Knowles,WR,,MIN,,,0.0,,3000.0
+maliknabers,Malik Nabers,WR,WR,NYG,NYG,WR19,14.6,19.0,5900.0
+malikwashington,Malik Washington,WR,WR,MIA,MIA,WR100,4.5,100.0,3000.0
+malikwillis,Malik Willis,QB,QB,TEN,GB,QB65,0.0,65.0,4000.0
+marcedeslewis,Marcedes Lewis,TE,TE,CHI,CHI,TE93,0.7,93.0,2500.0
+marcusmariota,,,QB,,WAS,QB76,0.0,76.0,
+markandrews,,,TE,,BAL,TE5,12.8,5.0,
+marquezcallaway,Marquez Callaway,WR,,PIT,,,0.0,,3000.0
+marquezvaldesscantling,Marquez Valdes-Scantling,WR,WR,BUF,BUF,WR123,2.5,123.0,3700.0
+marvinharrisonjr,Marvin Harrison Jr.,WR,WR,ARI,ARI,WR12,15.3,12.0,7200.0
+marvinmimsjr,,,WR,,DEN,WR73,7.4,73.0,
+masonkinsey,Mason Kinsey,WR,,TEN,,,0.0,,3000.0
+masonrudolph,Mason Rudolph,QB,QB,TEN,TEN,QB48,0.4,48.0,4900.0
+masontipton,Mason Tipton,WR,WR,NO,NO,WR186,0.1,186.0,3000.0
+mattbarkley,,,QB,,FA,QB98,0.0,98.0,
+mattcorral,,,QB,,FA,QB93,0.0,93.0,
+matthewstafford,,,QB,,LAR,QB15,17.5,15.0,
+mattlanders,Matt Landers,WR,,NE,,,0.0,,3000.0
+mecolehardmanjr,,,WR,,KC,WR125,2.3,125.0,
+messiahswinson,,,TE,,CAR,TE104,0.2,104.0,
+miamidolphins,,,DST,,MIA,DST20,6.1,20.0,
+michaelcarter,Michael Carter,RB,RB,ARI,ARI,RB91,1.0,91.0,4400.0
+michaeljacobson,Michael Jacobson,TE,,NO,,,0.0,,2500.0
+michaelmayer,,,TE,,LV,TE31,5.1,31.0,
+michaelpenixjr,Michael Penix Jr.,QB,QB,ATL,ATL,QB39,0.5,39.0,5000.0
+michaelpittmanjr,Michael Pittman Jr.,WR,WR,IND,IND,WR14,15.3,14.0,6800.0
+michaelpratt,,,QB,,TB,QB82,0.0,82.0,
+michaelwiley,,,RB,,WAS,RB134,0.0,134.0,
+michaelwilson,Michael Wilson,WR,WR,ARI,ARI,WR62,9.1,62.0,4300.0
+mikeboone,Mike Boone,RB,,CAR,,,0.0,,4000.0
+mikeevans,,,WR,,TB,WR10,15.8,10.0,
+mikegesicki,Mike Gesicki,TE,TE,CIN,CIN,TE29,5.5,29.0,3000.0
+mikestrachan,Mike Strachan,WR,,CAR,,,0.0,,3000.0
+mikewhite,Mike White,QB,QB,BUF,BUF,QB63,0.0,63.0,4700.0
+mikewilliams,,,WR,,NYJ,WR61,9.2,61.0,
+milesboykin,Miles Boykin,WR,,NYG,,,0.0,,3000.0
+milessanders,Miles Sanders,RB,RB,CAR,CAR,RB55,5.0,55.0,4500.0
+minnesotavikings,,,DST,,MIN,DST7,7.7,7.0,
+mitchelltrubisky,Mitchell Trubisky,QB,QB,BUF,BUF,QB61,0.2,61.0,4800.0
+mitchellwilcox,Mitchell Wilcox,TE,,NE,,,0.0,,2500.0
+moaliecox,Mo Alie-Cox,TE,TE,IND,IND,TE47,2.8,47.0,2500.0
+moralstephens,,,TE,,FA,TE107,0.1,107.0,
+mycolepruitt,MyCole Pruitt,TE,TE,PIT,PIT,TE80,1.0,80.0,2500.0
+mylesgaskin,Myles Gaskin,RB,RB,MIN,MIN,RB125,0.0,125.0,4200.0
+najeeharris,Najee Harris,RB,RB,PIT,PIT,RB26,11.7,26.0,5600.0
+nateadkins,,,TE,,DEN,TE87,0.8,87.0,
+nathanrourke,Nathan Rourke,QB,,NYG,,,0.0,,4000.0
+nelsonagholor,,,WR,,BAL,WR89,5.2,89.0,
+newenglandpatriots,,,DST,,NE,DST30,5.4,30.0,
+neworleanssaints,,,DST,,NO,DST2,8.3,2.0,
+newyorkgiants,,,DST,,NYG,DST17,6.4,17.0,
+newyorkjets,,,DST,,NYJ,DST12,6.9,12.0,
+nickmullens,Nick Mullens,QB,QB,MIN,MIN,QB44,0.4,44.0,4500.0
+nickmuse,Nick Muse,TE,TE,MIN,MIN,TE89,0.8,89.0,2500.0
+nickvannett,Nick Vannett,TE,TE,TEN,TEN,TE99,0.6,99.0,2500.0
+nickwestbrookikhine,Nick Westbrook-Ikhine,WR,WR,TEN,TEN,WR137,1.5,137.0,3200.0
+nicocollins,Nico Collins,WR,WR,HOU,HOU,WR17,14.9,17.0,7000.0
+nkealharry,N'Keal Harry,TE,,MIN,,,0.0,,2500.0
+noahbrown,,,WR,,WAS,WR98,4.6,98.0,
+noahcain,Noah Cain,RB,,CIN,,,0.0,,4000.0
+noahfant,,,TE,,SEA,TE21,7.3,21.0,
+noahgray,,,TE,,KC,TE43,3.2,43.0,
+nsimbawebster,Nsimba Webster,WR,,CHI,,,0.0,,3000.0
+odellbeckhamjr,Odell Beckham Jr.,WR,,MIA,,,0.0,,3800.0
+ojhiliare,OJ Hiliare,WR,,ATL,,,0.0,,3000.0
+olamidezaccheaus,,,WR,,WAS,WR114,3.3,114.0,
+panthers,Panthers,DST,,CAR,,,0.0,,2400.0
+parkerhesse,,,TE,,DET,TE98,0.6,98.0,
+parkerwashington,Parker Washington,WR,WR,JAX,JAC,WR126,2.2,126.0,3300.0
+parriscampbell,,,WR,,PHI,WR171,0.3,171.0,
+patfreiermuth,Pat Freiermuth,TE,TE,PIT,PIT,TE14,8.4,14.0,4400.0
+patrickmahomesii,,,QB,,KC,QB3,21.5,3.0,
+patrickmurtagh,Patrick Murtagh,TE,,JAX,,,0.0,,2500.0
+patrickricard,,,RB,,BAL,RB105,0.5,105.0,
+patrickscales,Patrick Scales,TE,,CHI,,,0.0,,2500.0
+patricktaylorjr,,,RB,,SF,RB123,0.0,123.0,
+patriots,Patriots,DST,,NE,,,0.0,,2600.0
+paynedurham,,,TE,,TB,TE69,1.5,69.0,
+peterleblanc,Peter LeBlanc,WR,,CHI,,,0.0,,3000.0
+pharaohbrown,,,TE,,SEA,TE92,0.7,92.0,
+philadelphiaeagles,,,DST,,PHI,DST19,6.1,19.0,
+pierrestrongjr,,,RB,,CLE,RB71,2.1,71.0,
+pittsburghsteelers,,,DST,,PIT,DST11,7.3,11.0,
+pukanacua,,,WR,,LAR,WR7,16.0,7.0,
+quentinjohnston,,,WR,,LAC,WR78,6.4,78.0,
+quezwatkins,Quez Watkins,WR,,PIT,,,0.0,,3000.0
+quintezcephus,Quintez Cephus,WR,,HOU,,,0.0,,3000.0
+quintinmorris,Quintin Morris,TE,TE,BUF,BUF,TE95,0.6,95.0,2500.0
+rachaadwhite,,,RB,,TB,RB8,16.2,8.0,
+raheemblackshear,Raheem Blackshear,RB,RB,CAR,CAR,RB95,0.8,95.0,4000.0
+raheemmostert,Raheem Mostert,RB,RB,MIA,MIA,RB23,12.1,23.0,6400.0
+ramelkeyton,,,WR,,LV,WR170,0.3,170.0,
+rashaadpenny,Rashaad Penny,RB,,CAR,,,0.0,,4200.0
+rasheerice,,,WR,,KC,WR18,14.7,18.0,
+rashidshaheed,Rashid Shaheed,WR,WR,NO,NO,WR53,10.4,53.0,4400.0
+rashodbateman,,,WR,,BAL,WR66,7.9,66.0,
+raydavis,Ray Davis,RB,RB,BUF,BUF,RB48,6.7,48.0,4500.0
+rayraymccloudiii,Ray-Ray McCloud III,WR,WR,ATL,ATL,WR105,4.2,105.0,3000.0
+reggiegilliam,Reggie Gilliam,RB,RB,BUF,BUF,RB116,0.2,116.0,4000.0
+reidsinnett,,,QB,,FA,QB89,0.0,89.0,
+rhamondrestevenson,Rhamondre Stevenson,RB,RB,NE,NE,RB20,12.9,20.0,5900.0
+ricodowdle,,,RB,,DAL,RB41,8.1,41.0,
+rivercracraft,River Cracraft,WR,,MIA,,,0.0,,3000.0
+robbiechosen,Robbie Chosen,WR,WR,MIA,MIA,WR193,0.1,193.0,3000.0
+robertburns,Robert Burns,RB,,ATL,,,0.0,,4000.0
+roberttonyan,Robert Tonyan,TE,TE,MIN,MIN,TE94,0.7,94.0,2600.0
+robertwoods,Robert Woods,WR,WR,HOU,HOU,WR121,2.6,121.0,3100.0
+rockylombardi,Rocky Lombardi,QB,,CIN,,,0.0,,4000.0
+rodneywilliams,Rodney Williams,TE,TE,PIT,PIT,TE113,0.0,113.0,2500.0
+romanwilson,Roman Wilson,WR,,PIT,,,0.0,,3200.0
+romeodoubs,,,WR,,GB,WR51,10.5,51.0,
+romeodunze,Rome Odunze,WR,WR,CHI,CHI,WR44,11.1,44.0,4000.0
+rondalemoore,Rondale Moore,WR,,ATL,,,0.0,,3600.0
+ronniebell,,,WR,,SF,WR157,0.5,157.0,
+ronnierivers,,,RB,,LAR,RB81,1.2,81.0,
+roschonjohnson,Roschon Johnson,RB,RB,CHI,CHI,RB57,4.7,57.0,4400.0
+rossdwelley,Ross Dwelley,TE,TE,ATL,ATL,TE90,0.8,90.0,2500.0
+roycefreeman,,,RB,,FA,RB103,0.5,103.0,
+russellwilson,Russell Wilson,QB,QB,PIT,PIT,QB32,13.5,32.0,5400.0
+ryanflournoy,,,WR,,DAL,WR153,0.6,153.0,
+ryantannehill,,,QB,,FA,QB84,0.0,84.0,
+sagesurratt,Sage Surratt,TE,,ARI,,,0.0,,2500.0
+saints,Saints,DST,,NO,,,0.0,,3700.0
+salvonahmed,Salvon Ahmed,RB,,MIA,,,0.0,,4000.0
+samajeperine,,,RB,,KC,RB50,6.5,50.0,
+samdarnold,Sam Darnold,QB,QB,MIN,MIN,QB25,15.6,25.0,5200.0
+samehlinger,Sam Ehlinger,QB,QB,IND,IND,QB85,0.0,85.0,4000.0
+samhowell,,,QB,,SEA,QB37,0.5,37.0,
+samlaporta,,,TE,,DET,TE1,15.0,1.0,
+sammisreyes,Sammis Reyes,TE,,MIN,,,0.0,,2500.0
+samoritoure,Samori Toure,WR,WR,CHI,CHI,WR192,0.1,192.0,3000.0
+sampinckney,Sam Pinckney,WR,,CAR,,,0.0,,3000.0
+samschnee,Sam Schnee,WR,,TEN,,,0.0,,3000.0
+sanfranciscoers,,,DST,,SF,DST4,7.9,4.0,
+saquonbarkley,,,RB,,PHI,RB4,17.0,4.0,
+scottymiller,Scotty Miller,WR,WR,PIT,PIT,WR140,1.1,140.0,3000.0
+seanclifford,,,QB,,GB,QB77,0.0,77.0,
+seanmckeon,Sean McKeon,TE,,IND,,,0.0,,2500.0
+seantucker,,,RB,,TB,RB98,0.7,98.0,
+seattleseahawks,,,DST,,SEA,DST5,7.9,5.0,
+sethwilliams,Seth Williams,WR,,JAX,,,0.0,,3000.0
+shanebuechele,Shane Buechele,QB,,BUF,,,0.0,,4000.0
+shawnbowman,Shawn Bowman,TE,,JAX,,,0.0,,2500.0
+shedrickjackson,Shedrick Jackson,WR,,CIN,,,0.0,,3000.0
+simifehoko,,,WR,,LAC,WR168,0.4,168.0,
+sionevaki,,,RB,,DET,RB110,0.2,110.0,
+skylarthompson,Skylar Thompson,QB,QB,MIA,MIA,QB47,0.4,47.0,4000.0
+skyymoore,,,WR,,KC,WR130,1.9,130.0,
+spencerrattler,Spencer Rattler,QB,QB,NO,NO,QB57,0.4,57.0,4000.0
+stanleymorganjr,Stanley Morgan Jr.,WR,,NO,,,0.0,,3000.0
+steelers,Steelers,DST,,PIT,,,0.0,,2900.0
+stefondiggs,Stefon Diggs,WR,WR,HOU,HOU,WR25,13.9,25.0,6700.0
+stephencarlson,Stephen Carlson,TE,,CHI,,,0.0,,2500.0
+stephensullivan,Stephen Sullivan,TE,,CAR,,,0.0,,2500.0
+sterlingshepard,,,WR,,TB,WR196,0.1,196.0,
+stetsonbennett,,,QB,,LAR,QB66,0.0,66.0,
+stevensims,Steven Sims,WR,,HOU,,,0.0,,3000.0
+stevensimsjr,,,WR,,HOU,WR175,0.3,175.0,
+stevenstilianos,Steven Stilianos,TE,,TEN,,,0.0,,2500.0
+stonesmartt,,,TE,,LAC,TE71,1.4,71.0,
+tahjwashington,Tahj Washington,WR,,MIA,,,0.0,,3000.0
+tampabaybuccaneers,,,DST,,TB,DST9,7.6,9.0,
+tankbigsby,Tank Bigsby,RB,RB,JAX,JAC,RB58,4.6,58.0,5000.0
+tankdell,Tank Dell,WR,WR,HOU,HOU,WR32,13.0,32.0,5500.0
+tannerconner,Tanner Conner,TE,TE,MIA,MIA,TE109,0.0,109.0,2500.0
+tannerhudson,Tanner Hudson,TE,TE,CIN,CIN,TE45,2.9,45.0,2900.0
+tannermclachlan,Tanner McLachlan,TE,TE,CIN,CIN,TE100,0.6,100.0,2500.0
+taylorheinicke,,,QB,,LAC,QB62,0.2,62.0,
+taysomhill,Taysom Hill,TE,TE,NO,NO,TE16,7.7,16.0,4300.0
+teaganquitoriano,Teagan Quitoriano,TE,,HOU,,,0.0,,2500.0
+teehiggins,Tee Higgins,WR,WR,CIN,CIN,WR74,7.2,74.0,6100.0
+tejhaunpalmer,Tejhaun Palmer,WR,,ARI,,,0.0,,3000.0
+tennesseetitans,,,DST,,TEN,DST23,5.8,23.0,
+terracemarshalljr,Terrace Marshall Jr.,WR,,CAR,,,0.0,,3000.0
+terrelljennings,Terrell Jennings,RB,,NE,,,0.0,,4000.0
+terrymclaurin,,,WR,,WAS,WR26,13.9,26.0,
+texans,Texans,DST,,HOU,,,0.0,,2700.0
+thayerthomas,Thayer Thomas,WR,,MIN,,,0.0,,3000.0
+theojohnson,Theo Johnson,TE,TE,NYG,NYG,TE39,4.5,39.0,2500.0
+thomasodukoya,Thomas Odukoya,TE,TE,TEN,TEN,TE103,0.3,103.0,2500.0
+timboyle,Tim Boyle,QB,QB,MIA,MIA,QB88,0.0,88.0,4000.0
+timjones,Tim Jones,WR,WR,JAX,JAC,WR177,0.3,177.0,3000.0
+timpatrick,,,WR,,DET,WR144,1.0,144.0,
+tipreiman,Tip Reiman,TE,TE,ARI,ARI,TE70,1.5,70.0,2500.0
+titans,Titans,DST,,TEN,,,0.0,,2800.0
+tjhockenson,T.J. Hockenson,TE,,MIN,,,0.0,,5900.0
+tommydevito,Tommy DeVito,QB,QB,NYG,NYG,QB72,0.0,72.0,4400.0
+tommyhudson,Tommy Hudson,TE,,NO,,,0.0,,2500.0
+tommysweeney,Tommy Sweeney,TE,,CHI,,,0.0,,2500.0
+tommytremble,Tommy Tremble,TE,TE,CAR,CAR,TE84,0.9,84.0,2500.0
+tonyjonesjr,Tony Jones Jr.,RB,,ARI,,,0.0,,4000.0
+tonypollard,Tony Pollard,RB,RB,TEN,TEN,RB30,11.1,30.0,5900.0
+travisetiennejr,Travis Etienne Jr.,RB,RB,JAX,JAC,RB6,16.4,6.0,7200.0
+travishomer,Travis Homer,RB,RB,CHI,CHI,RB111,0.2,111.0,4000.0
+traviskelce,,,TE,,KC,TE2,14.4,2.0,
+travisvokolek,Travis Vokolek,TE,TE,ARI,ARI,TE106,0.2,106.0,2500.0
+trayveonwilliams,Trayveon Williams,RB,RB,CIN,CIN,RB107,0.4,107.0,4300.0
+tremckitty,Tre' McKitty,TE,,BUF,,,0.0,,2500.0
+tremosley,Tre Mosley,WR,,CIN,,,0.0,,3000.0
+trentonirwin,Trenton Irwin,WR,WR,CIN,CIN,WR115,3.2,115.0,3900.0
+trentpennix,Trent Pennix,RB,,IND,,,0.0,,4000.0
+trentsherfieldsr,Trent Sherfield Sr.,WR,WR,MIN,MIN,WR151,0.6,151.0,3200.0
+trenttaylor,,,WR,,SF,WR199,0.0,199.0,
+treshaunharrison,Tre'Shaun Harrison,WR,,TEN,,,0.0,,3000.0
+tretucker,,,WR,,LV,WR87,5.3,87.0,
+trevorlawrence,Trevor Lawrence,QB,QB,JAX,JAC,QB13,17.8,13.0,6200.0
+trevorsiemian,,,QB,,FA,QB90,0.0,90.0,
+treybenson,Trey Benson,RB,RB,ARI,ARI,RB49,6.6,49.0,5100.0
+treyknox,Trey Knox,TE,,MIN,,,0.0,,2500.0
+treylance,,,QB,,DAL,QB68,0.0,68.0,
+treylonburks,Treylon Burks,WR,WR,TEN,TEN,WR103,4.3,103.0,3400.0
+treymcbride,Trey McBride,TE,TE,ARI,ARI,TE3,12.9,3.0,6100.0
+treypalmer,,,WR,,TB,WR97,4.6,97.0,
+treysermon,Trey Sermon,RB,RB,IND,IND,RB69,2.1,69.0,4500.0
+treytonwelch,Treyton Welch,TE,,NO,,,0.0,,2500.0
+trishtonjackson,Trishton Jackson,WR,WR,MIN,MIN,WR160,0.5,160.0,3000.0
+troyfranklin,,,WR,,DEN,WR95,4.6,95.0,
+troyhairston,Troy Hairston,RB,,HOU,,,0.0,,4000.0
+tuatagovailoa,Tua Tagovailoa,QB,QB,MIA,MIA,QB12,17.9,12.0,7000.0
+tuckerkraft,,,TE,,GB,TE30,5.1,30.0,
+tutuatwell,,,WR,,LAR,WR117,2.9,117.0,
+tychandler,Ty Chandler,RB,RB,MIN,MIN,RB46,7.0,46.0,5400.0
+tyjaespears,Tyjae Spears,RB,RB,TEN,TEN,RB35,10.2,35.0,5100.0
+tyjames,Ty James,WR,,MIN,,,0.0,,3000.0
+tyjohnson,Ty Johnson,RB,RB,BUF,BUF,RB75,1.9,75.0,4600.0
+tylanwallace,,,WR,,BAL,WR156,0.6,156.0,
+tylerallgeier,Tyler Allgeier,RB,RB,ATL,ATL,RB44,7.8,44.0,5000.0
+tylerbadie,,,RB,,DEN,RB135,0.0,135.0,
+tylerboyd,Tyler Boyd,WR,WR,TEN,TEN,WR69,7.6,69.0,4500.0
+tylerconklin,,,TE,,NYJ,TE17,7.7,17.0,
+tylergoodson,Tyler Goodson,RB,RB,IND,IND,RB94,0.8,94.0,4000.0
+tylerhuntley,,,QB,,BAL,QB69,0.0,69.0,
+tylerjohnson,,,WR,,LAR,WR176,0.3,176.0,
+tylerlockett,,,WR,,SEA,WR45,11.0,45.0,
+tylerscott,Tyler Scott,WR,WR,CHI,CHI,WR133,1.6,133.0,3000.0
+tyquanthornton,Tyquan Thornton,WR,WR,NE,NE,WR112,3.4,112.0,3000.0
+tyreejackson,Tyree Jackson,TE,,NYG,,,0.0,,2500.0
+tyreekhill,Tyreek Hill,WR,WR,MIA,MIA,WR2,19.0,2.0,8700.0
+tyrellshavers,Tyrell Shavers,WR,,BUF,,,0.0,,3000.0
+tyriecleveland,Tyrie Cleveland,WR,,IND,,,0.0,,3000.0
+tyriondavisprice,,,RB,,PHI,RB131,0.0,131.0,
+tyrodtaylor,,,QB,,NYJ,QB36,0.5,36.0,
+tyronetracyjr,Tyrone Tracy Jr.,RB,RB,NYG,NYG,RB62,3.6,62.0,4400.0
+tysonbagent,Tyson Bagent,QB,QB,CHI,CHI,QB54,0.4,54.0,4600.0
+vanjefferson,Van Jefferson,WR,WR,PIT,PIT,WR81,6.0,81.0,3600.0
+velusjonesjr,Velus Jones Jr.,WR,WR,CHI,CHI,WR146,0.8,146.0,3000.0
+vikings,Vikings,DST,,MIN,,,0.0,,3600.0
+wandalerobinson,Wan'Dale Robinson,WR,WR,NYG,NYG,WR67,7.9,67.0,4100.0
+washingtoncommanders,,,DST,,WAS,DST25,5.7,25.0,
+willdissly,,,TE,,LAC,TE41,4.1,41.0,
+willgrier,,,QB,,PHI,QB91,0.0,91.0,
+willlevis,Will Levis,QB,QB,TEN,TEN,QB26,15.2,26.0,5300.0
+willmallory,Will Mallory,TE,TE,IND,IND,TE55,2.2,55.0,2500.0
+willshipley,,,RB,,PHI,RB72,2.1,72.0,
+xaviergipson,,,WR,,NYJ,WR107,4.1,107.0,
+xavierhutchinson,Xavier Hutchinson,WR,WR,HOU,HOU,WR163,0.5,163.0,3000.0
+xavierjohnson,Xavier Johnson,WR,,HOU,,,0.0,,3000.0
+xavierlegette,Xavier Legette,WR,WR,CAR,CAR,WR76,6.8,76.0,4600.0
+xavierweaver,Xavier Weaver,WR,WR,ARI,ARI,WR198,0.1,198.0,3000.0
+xavierwhite,Xavier White,WR,,IND,,,0.0,,3000.0
+xavierworthy,,,WR,,KC,WR39,11.8,39.0,
+zachcharbonnet,,,RB,,SEA,RB43,7.9,43.0,
+zachdavidson,Zach Davidson,TE,,BUF,,,0.0,,2500.0
+zachertz,,,TE,,WAS,TE23,6.9,23.0,
+zachpascal,Zach Pascal,WR,WR,ARI,ARI,WR143,1.0,143.0,3000.0
+zachwilson,,,QB,,DEN,QB67,0.0,67.0,
+zachwood,Zach Wood,TE,,NO,,,0.0,,2500.0
+zackmoss,Zack Moss,RB,RB,CIN,CIN,RB32,10.6,32.0,5800.0
+zamirwhite,,,RB,,LV,RB28,11.6,28.0,
+zanderhorvath,Zander Horvath,RB,,MIA,,,0.0,,4000.0
+zavierscott,Zavier Scott,RB,,MIN,,,0.0,,4000.0
+zayflowers,,,WR,,BAL,WR30,13.3,30.0,
+zayjones,Zay Jones,WR,WR,ARI,ARI,WR166,0.4,166.0,4600.0
