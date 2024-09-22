@@ -17,19 +17,31 @@ DRAFTABLES_URL = "https://api.draftkings.com/draftgroups/v1/draftgroups/{}/draft
 
 def get_contest_by_type(contests: List[Dict[str, Any]], contest_type: str) -> Optional[Dict[str, Any]]:
     """Find a contest based on the specified type."""
+    contest_type = contest_type.lower()
+    
     type_mapping = {
-        "early": ["Early Only"],
-        "afternoon": ["Afternoon Only"],
-        "primetime": ["Primetime"],
-        "main": ["Main", "Sun-Mon"],
-        "thursday": ["Thu-Mon"],
-        "sunday": ["Sunday Only"]
+        "early": ["early only"],
+        "afternoon": ["afternoon only"],
+        "primetime": ["primetime"],
+        "main": ["main", "sun-mon"],
+        "thursday": ["thu-mon"],
+        "sunday": ["sunday only"],
     }
     
-    search_terms = type_mapping.get(contest_type.lower(), [contest_type])
-    
     for contest in contests:
-        if any(term.lower() in contest['n'].lower() for term in search_terms):
+        # Check for Featured contest
+        if contest_type == "featured":
+            if contest.get("dg") == 113472 or contest.get("DraftGroupId") == 113472:
+                return contest
+        
+        # Check for other contest types
+        if contest_type in type_mapping:
+            contest_name = contest.get('n', '').lower()
+            if any(term in contest_name for term in type_mapping[contest_type]):
+                return contest
+        
+        # Fallback for exact match if not in type_mapping
+        if contest_type in contest.get('n', '').lower():
             return contest
     
     logger.error(f"No contest found for type: {contest_type}")

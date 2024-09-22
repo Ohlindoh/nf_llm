@@ -10,3 +10,4 @@ scikit-learn
 numpy
 lxml
 ipywidgets
+streamlit
