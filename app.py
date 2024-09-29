@@ -34,6 +34,14 @@ def preprocess_data(data):
 
 data = preprocess_data(data)
 
+# Add this new function after the preprocess_data function
+def get_undervalued_players(data, top_n=5):
+    undervalued = {}
+    for position in ['QB', 'RB', 'WR', 'TE', 'DST']:
+        position_data = data[data['player_position_id'] == position].sort_values('value', ascending=False)
+        undervalued[position] = position_data.head(top_n)[['player_name', 'team', 'salary', 'projected_points', 'value']]
+    return undervalued
+
 # Initialize agents
 user_proxy = UserProxyAgent(
     name="UserProxy",
@@ -335,6 +343,19 @@ def display_player_exposure(optimizer_agent):
 # Create UI using Streamlit
 def create_fantasy_football_ui():
     st.title('Daily Fantasy Football Lineup Generator')
+
+    # Add a collapsible section for undervalued players
+    with st.expander("View Most Undervalued Players", expanded=False):
+        st.subheader('Most Undervalued Players')
+        undervalued_players = get_undervalued_players(data)
+        for position, players in undervalued_players.items():
+            st.write(f"**{position}**")
+            st.dataframe(players.style.format({
+                'salary': '${:,.0f}',
+                'projected_points': '{:.2f}',
+                'value': '{:.4f}'
+            }))
+            st.write("---")  # Add a separator between positions
 
     user_input = st.text_area('Enter your lineup requests:', '', height=75)
     num_lineups = st.number_input('Number of Lineups', min_value=1, max_value=150, value=1)

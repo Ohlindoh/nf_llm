@@ -4,7 +4,7 @@ import re
 import csv
 from typing import Optional, Dict, Any, List
 import os
-from datetime import datetime
+import argparse
 
 from collectors.utils import clean_player_name
 
@@ -47,21 +47,26 @@ def get_contest_by_type(contests: List[Dict[str, Any]], contest_type: str) -> Op
     logger.error(f"No contest found for type: {contest_type}")
     return None
 
-def collect_draftkings_data(contest_type: str) -> Optional[List[Dict[str, Any]]]:
+
+def collect_draftkings_data(contest_type: str, draft_group_id: Optional[int] = None) -> Optional[List[Dict[str, Any]]]:
     """Collect DraftKings data for NFL contests."""
     try:
-        # Get contests
-        response = requests.get(CONTESTS_URL)
-        response.raise_for_status()
-        contests = response.json().get('Contests', [])
-        
-        selected_contest = get_contest_by_type(contests, contest_type)
-        
-        if not selected_contest:
-            return None
-        
-        draft_group_id = selected_contest['dg']
-        logger.info(f"Using draft group ID: {draft_group_id} for '{contest_type}' contest")
+        if draft_group_id is None:
+            # Get contests
+            response = requests.get(CONTESTS_URL)
+            response.raise_for_status()
+            contests = response.json().get('Contests', [])
+            
+            selected_contest = get_contest_by_type(contests, contest_type)
+            
+            if not selected_contest:
+                logger.error(f"Could not find contest for type '{contest_type}'")
+                return None
+            
+            draft_group_id = selected_contest['dg']
+            logger.info(f"Using draft group ID: {draft_group_id} for '{contest_type}' contest")
+        else:
+            logger.info(f"Using provided draft group ID: {draft_group_id}")
         
         # Fetch draftables data
         response = requests.get(DRAFTABLES_URL.format(draft_group_id))
@@ -74,6 +79,7 @@ def collect_draftkings_data(contest_type: str) -> Optional[List[Dict[str, Any]]]
             processed_player = {
                 'player_name': clean_player_name(player['displayName']),
                 'salary': player['salary'],
+                # Include other fields as needed
             }
             processed_data.append(processed_player)
         
@@ -86,6 +92,7 @@ def collect_draftkings_data(contest_type: str) -> Optional[List[Dict[str, Any]]]
         logger.error(f"Unexpected error: {e}")
     
     return None
+
 
 def write_to_csv(data: List[Dict[str, Any]], filename: str = 'dk.csv'):
     """Write the processed data to a CSV file."""
@@ -109,11 +116,12 @@ def write_to_csv(data: List[Dict[str, Any]], filename: str = 'dk.csv'):
     except IOError as e:
         logger.error(f"Error writing to CSV file: {e}")
 
-def main(contest_type: str):
-    data = collect_draftkings_data(contest_type)
+
+def main(contest_type: str, draft_group_id: Optional[int] = None):
+    data = collect_draftkings_data(contest_type, draft_group_id)
     if data:
         print(f"Successfully collected data for {len(data)} players")
-        filename = f"dk.csv"
+        filename = "dk.csv"
         write_to_csv(data, filename)
         print("Sample data:")
         for player in data[:5]:  # Print first 5 players as a sample
@@ -121,6 +129,13 @@ def main(contest_type: str):
     else:
         print("Failed to collect DraftKings data")
 
+
 if __name__ == "__main__":
-    contest_type = input("Enter the contest type (e.g., 'Early', 'Afternoon', 'Primetime', 'Main', 'Thursday', 'Sunday'): ")
-    main(contest_type)
+    parser = argparse.ArgumentParser(description="Collect DraftKings data for NFL contests.")
+    parser.add_argument("--contest_type", type=str, default="Main",
+                        help="Contest type (e.g., 'Early', 'Afternoon', 'Primetime', 'Main', 'Thursday', 'Sunday')")
+    parser.add_argument("--draft_group_id", type=int, default=None,
+                        help="Draft group ID (overrides contest type if provided)")
+    args = parser.parse_args()
+
+    main(args.contest_type, args.draft_group_id)

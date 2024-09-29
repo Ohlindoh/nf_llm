@@ -1,5 +1,5 @@
 import logging
-from typing import Dict
+from typing import Dict, Optional
 import pandas as pd
 import os
 import sys
@@ -24,14 +24,14 @@ from collectors.utils import clean_player_name
 OUTPUT_DIR = 'data'
 OUTPUT_FILE = 'merged_fantasy_football_data.csv'
 
-def collect_all_data(dk_contest_type: str) -> Dict[str, pd.DataFrame]:
+def collect_all_data(dk_contest_type: str, dk_draft_group_id: Optional[int] = None) -> Dict[str, pd.DataFrame]:
     """
     Collect data from all available sources.
     Returns a dictionary with data source names as keys and DataFrames as values.
     """
     data_sources = {
         "fantasy_pros": collect_and_clean_fantasy_pros_data,
-        "draftkings": lambda: collect_draftkings_data(dk_contest_type),
+        "draftkings": lambda: collect_draftkings_data(dk_contest_type, dk_draft_group_id),
         "player_stats": collect_fantasy_pros_stats
     }
 
@@ -105,9 +105,9 @@ def save_data(data: pd.DataFrame, filename: str) -> None:
     data.to_csv(output_path, index=False)
     logger.info(f"Data saved to {output_path}")
 
-def main(dk_contest_type: str) -> None:
+def main(dk_contest_type: str, dk_draft_group_id: Optional[int] = None) -> None:
     # Collect data from all sources
-    collected_data = collect_all_data(dk_contest_type)
+    collected_data = collect_all_data(dk_contest_type, dk_draft_group_id)
 
     # Merge all dataframes
     merged_data = merge_dataframes(collected_data)
@@ -121,7 +121,8 @@ def main(dk_contest_type: str) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Collect fantasy football data including DraftKings contests.")
-    parser.add_argument("dk_contest_type", type=str, help="DraftKings contest type (e.g., 'Early', 'Afternoon', 'Primetime', 'Main', 'Thursday', 'Sunday')")
+    parser.add_argument("--dk_contest_type", type=str, default="Main", help="DraftKings contest type (e.g., 'Early', 'Afternoon', 'Primetime', 'Main', 'Thursday', 'Sunday')")
+    parser.add_argument("--draft_group_id", type=int, default=None, help="DraftKings draft group ID (overrides contest type if provided)")
     args = parser.parse_args()
 
-    main(args.dk_contest_type)
+    main(args.dk_contest_type, args.draft_group_id)
