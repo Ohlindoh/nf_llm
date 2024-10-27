@@ -359,7 +359,7 @@ def create_fantasy_football_ui():
 
     user_input = st.text_area('Enter your lineup requests:', '', height=75)
     num_lineups = st.number_input('Number of Lineups', min_value=1, max_value=150, value=1)
-    max_exposure = st.slider('Maximum Player Exposure (%)', min_value=0, max_value=100, value=30)
+    max_exposure = st.slider('Maximum Player Exposure (%)', min_value=0, max_value=100, value=65)
 
     generate_button = st.button('Generate Lineup(s)')
 
