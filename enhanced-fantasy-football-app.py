@@ -164,25 +164,86 @@ class LineupOptimizerAgent:
         return bonus
 
     def build_lineup(self, player_vars, players):
-        lineup = {}
-
+        """
+        Build lineup with correct position assignments.
+        Added debugging and strict position handling.
+        """
+        # Step 1: Collect all selected players with their scores
+        selected_players = []
         for player in players:
-            if player_vars[player['player_name'], player['player_position_id']].varValue == 1:
-                position = player['player_position_id']
-                key = position
-                if position == 'RB':
-                    key = 'RB1' if 'RB1' not in lineup else 'RB2' if 'RB2' not in lineup else 'FLEX'
-                elif position == 'WR':
-                    key = 'WR1' if 'WR1' not in lineup else 'WR2' if 'WR2' not in lineup else 'WR3' if 'WR3' not in lineup else 'FLEX'
-                elif position == 'TE':
-                    key = 'TE' if 'TE' not in lineup else 'FLEX'
-                elif position == 'DST':
-                    key = 'DST'
-                elif position == 'QB':
-                    key = 'QB'
-                if key not in lineup:
-                    lineup[key] = player
-
+            if abs(player_vars[player['player_name'], player['player_position_id']].varValue - 1.0) < 1e-7:  # Handle floating point comparison
+                selected_players.append(player)
+        
+        # Verify we have exactly 9 players
+        if len(selected_players) != 9:
+            raise ValueError(f"Expected 9 players, got {len(selected_players)}")
+        
+        lineup = {}
+        position_groups = {
+            'RB': [],
+            'WR': [],
+            'TE': []
+        }
+        
+        # Step 2: Initial sort and position grouping
+        for player in selected_players:
+            pos = player['player_position_id']
+            if pos == 'QB':
+                lineup['QB'] = player
+            elif pos == 'DST':
+                lineup['DST'] = player
+            elif pos in position_groups:
+                position_groups[pos].append(player)
+        
+        # Sort all position groups by projected points
+        for pos in position_groups:
+            position_groups[pos].sort(key=lambda x: float(x['projected_points']), reverse=True)
+        
+        # Step 3: Fill required positions
+        # RBs (minimum 2)
+        rbs = position_groups['RB']
+        if len(rbs) >= 2:
+            lineup['RB1'] = rbs[0]
+            lineup['RB2'] = rbs[1]
+            position_groups['RB'] = rbs[2:]  # Remaining RBs
+        else:
+            raise ValueError(f"Not enough RBs: {len(rbs)}")
+        
+        # WRs (minimum 3)
+        wrs = position_groups['WR']
+        if len(wrs) >= 3:
+            lineup['WR1'] = wrs[0]
+            lineup['WR2'] = wrs[1]
+            lineup['WR3'] = wrs[2]
+            position_groups['WR'] = wrs[3:]  # Remaining WRs
+        else:
+            raise ValueError(f"Not enough WRs: {len(wrs)}")
+        
+        # TE (minimum 1)
+        tes = position_groups['TE']
+        if tes:
+            lineup['TE'] = tes[0]
+            position_groups['TE'] = tes[1:]  # Remaining TEs
+        else:
+            raise ValueError("No TE found")
+        
+        # Step 4: Handle FLEX position
+        # Collect all remaining players
+        flex_candidates = []
+        for pos, players in position_groups.items():
+            flex_candidates.extend(players)
+        
+        # Sort flex candidates by projected points and take the highest
+        if flex_candidates:
+            flex_candidates.sort(key=lambda x: float(x['projected_points']), reverse=True)
+            lineup['FLEX'] = flex_candidates[0]
+        
+        # Verify all required positions are filled
+        required_positions = {'QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DST'}
+        filled_positions = set(lineup.keys())
+        if filled_positions != required_positions:
+            raise ValueError(f"Missing positions: {required_positions - filled_positions}")
+        
         return lineup
 
     def generate_lineups(self, constraints: dict) -> list:
@@ -234,100 +295,184 @@ class LineupOptimizerAgent:
 class EnhancedLineupOptimizerAgent(LineupOptimizerAgent):
     def __init__(self, name, data):
         super().__init__(name, data)
-        self.calculate_player_consistency()
-
-    def calculate_player_consistency(self):
-        # For this example, we'll use a simple method to calculate consistency
-        # In a real scenario, you'd use historical data over multiple weeks
-        self.data['consistency'] = 1 / (1 + np.abs(self.data['projected_points'] - self.data['rank_ecr']))
 
     def generate_scenarios(self, num_scenarios=100):
         scenarios = []
         for _ in range(num_scenarios):
             scenario = self.data.copy()
-            # Add random noise to projected points
-            scenario['projected_points'] = scenario['projected_points'] * np.random.normal(1, 0.1, len(scenario))
+            
+            # Add position-specific noise
+            for idx, row in scenario.iterrows():
+                position = row['player_position_id']
+                base_noise = np.random.normal(1, 0.1)  # Base 10% standard deviation
+                
+                # Adjust noise based on position for FLEX consideration
+                if position == 'TE':
+                    # Add slight downward bias to TEs for FLEX consideration
+                    position_multiplier = 0.95  # 5% downward bias
+                elif position in ['RB', 'WR']:
+                    # Slight upward bias for traditional FLEX positions
+                    position_multiplier = 1.02  # 2% upward bias
+                else:
+                    position_multiplier = 1.0
+                    
+                scenario.at[idx, 'projected_points'] *= (base_noise * position_multiplier)
+            
             scenarios.append(scenario)
         return scenarios
 
     def optimize_lineup(self, constraints: dict, strategies: dict = {}, diversity_constraint: set = None) -> dict:
-        scenarios = self.generate_scenarios()
+        scenarios = self.generate_scenarios(num_scenarios=100)
         best_lineup = None
         best_score = -float('inf')
 
         for scenario in scenarios:
             prob = pulp.LpProblem("Fantasy Football", pulp.LpMaximize)
-
+            
             players = scenario.to_dict('records')
+            # Create binary variables for player selection
             player_vars = pulp.LpVariable.dicts("players", 
-                                                ((p['player_name'], p['player_position_id']) for p in players), 
-                                                cat='Binary')
+                                              ((p['player_name'], p['player_position_id']) for p in players), 
+                                              cat='Binary')
+            
+            # Create additional binary variables for FLEX position
+            flex_vars = pulp.LpVariable.dicts("flex",
+                                           ((p['player_name'], p['player_position_id']) for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']),
+                                           cat='Binary')
 
-            # Multi-objective function: balance projected points and consistency
+            # Objective: Maximize total projected points
             prob += pulp.lpSum([
-                (player['projected_points'] * 0.7 + player['consistency'] * 0.3 + self.apply_strategy_bonus(player, strategies)) * 
-                player_vars[player['player_name'], player['player_position_id']]
+                float(player['projected_points']) * (
+                    player_vars[player['player_name'], player['player_position_id']] +
+                    (flex_vars.get((player['player_name'], player['player_position_id']), 0) 
+                     if player['player_position_id'] in ['RB', 'WR', 'TE'] else 0)
+                )
                 for player in players
             ])
 
-            # Add all the constraints from the original optimize_lineup method
-            # Salary cap constraint
+            # Basic position requirements
+            prob += pulp.lpSum([player_vars[p['player_name'], 'QB'] for p in players if p['player_position_id'] == 'QB']) == 1
+            prob += pulp.lpSum([player_vars[p['player_name'], 'DST'] for p in players if p['player_position_id'] == 'DST']) == 1
+            
+            # Base position requirements (not counting FLEX)
+            rb_vars = [player_vars[p['player_name'], 'RB'] for p in players if p['player_position_id'] == 'RB']
+            wr_vars = [player_vars[p['player_name'], 'WR'] for p in players if p['player_position_id'] == 'WR']
+            te_vars = [player_vars[p['player_name'], 'TE'] for p in players if p['player_position_id'] == 'TE']
+            
+            prob += pulp.lpSum(rb_vars) == 2  # Exactly 2 RB in base positions
+            prob += pulp.lpSum(wr_vars) == 3  # Exactly 3 WR in base positions
+            prob += pulp.lpSum(te_vars) == 1  # Exactly 1 TE in base position
+            
+            # FLEX position constraints
+            # Only one player can be in FLEX
+            prob += pulp.lpSum([flex_vars[p['player_name'], p['player_position_id']] 
+                              for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']]) == 1
+            
+            # A player can't be in both base position and FLEX
+            for player in players:
+                if player['player_position_id'] in ['RB', 'WR', 'TE']:
+                    prob += player_vars[player['player_name'], player['player_position_id']] + \
+                            flex_vars[player['player_name'], player['player_position_id']] <= 1
+
+            # Salary cap includes both base and FLEX positions
             prob += pulp.lpSum([
-                player['salary'] * player_vars[player['player_name'], player['player_position_id']] 
+                float(player['salary']) * (
+                    player_vars[player['player_name'], player['player_position_id']] +
+                    (flex_vars.get((player['player_name'], player['player_position_id']), 0) 
+                     if player['player_position_id'] in ['RB', 'WR', 'TE'] else 0)
+                )
                 for player in players
             ]) <= 50000
 
-            # Position constraints
-            prob += pulp.lpSum([player_vars[p['player_name'], 'QB'] for p in players if p['player_position_id'] == 'QB']) == 1
-            prob += pulp.lpSum([player_vars[p['player_name'], 'RB'] for p in players if p['player_position_id'] == 'RB']) >= 2
-            prob += pulp.lpSum([player_vars[p['player_name'], 'WR'] for p in players if p['player_position_id'] == 'WR']) >= 3
-            prob += pulp.lpSum([player_vars[p['player_name'], 'TE'] for p in players if p['player_position_id'] == 'TE']) >= 1
-            prob += pulp.lpSum([player_vars[p['player_name'], 'DST'] for p in players if p['player_position_id'] == 'DST']) == 1
-
-            # Total players constraint
-            prob += pulp.lpSum([player_vars[p['player_name'], p['player_position_id']] for p in players]) == 9
-
-            # FLEX position constraints
-            prob += pulp.lpSum([
-                player_vars[p['player_name'], p['player_position_id']]
-                for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']
-            ]) >= 7
-
-            # Apply must_include constraints
+            # Apply constraints...
             if 'must_include' in constraints:
                 for player_name in constraints['must_include']:
                     prob += pulp.lpSum([
-                        player_vars[p['player_name'], p['player_position_id']] 
+                        player_vars[p['player_name'], p['player_position_id']] + 
+                        (flex_vars.get((p['player_name'], p['player_position_id']), 0) 
+                         if p['player_position_id'] in ['RB', 'WR', 'TE'] else 0)
                         for p in players if p['player_name'] == player_name
                     ]) == 1
 
-            # Apply avoid_teams constraints
             if 'avoid_teams' in constraints:
                 for team in constraints['avoid_teams']:
                     prob += pulp.lpSum([
-                        player_vars[p['player_name'], p['player_position_id']]
+                        player_vars[p['player_name'], p['player_position_id']] +
+                        (flex_vars.get((p['player_name'], p['player_position_id']), 0) 
+                         if p['player_position_id'] in ['RB', 'WR', 'TE'] else 0)
                         for p in players if p['team'] == team.lower()
                     ]) == 0
 
-            # Apply diversity constraints
             if diversity_constraint:
                 for player_name in diversity_constraint:
                     prob += pulp.lpSum([
-                        player_vars[player_name, p['player_position_id']]
+                        player_vars[p['player_name'], p['player_position_id']] +
+                        (flex_vars.get((p['player_name'], p['player_position_id']), 0) 
+                         if p['player_position_id'] in ['RB', 'WR', 'TE'] else 0)
                         for p in players if p['player_name'] == player_name
                     ]) == 0
 
-            # Solve the problem
+            # Solve this scenario
             prob.solve()
 
             if pulp.LpStatus[prob.status] == 'Optimal':
-                lineup = self.build_lineup(player_vars, players)
-                score = sum(p['projected_points'] * 0.7 + p['consistency'] * 0.3 for p in lineup.values())
-                if score > best_score:
-                    best_score = score
-                    best_lineup = lineup
+                # Build lineup considering both base and FLEX positions
+                selected_players = []
+                for player in players:
+                    base_val = player_vars[player['player_name'], player['player_position_id']].varValue
+                    flex_val = flex_vars.get((player['player_name'], player['player_position_id']), 0)
+                    if isinstance(flex_val, pulp.LpVariable):
+                        flex_val = flex_val.varValue
+                        
+                    if base_val > 0.5 or flex_val > 0.5:  # Account for floating point imprecision
+                        player_copy = player.copy()
+                        player_copy['is_flex'] = (flex_val > 0.5)
+                        selected_players.append(player_copy)
+
+                lineup = self.build_lineup_from_selected(selected_players)
+                
+                if 'error' not in lineup:
+                    score = sum(float(player['projected_points']) for player in lineup.values())
+                    if score > best_score:
+                        best_score = score
+                        best_lineup = lineup
 
         return best_lineup if best_lineup else {'error': "Optimization failed for all scenarios"}
+
+    def build_lineup_from_selected(self, selected_players):
+        """Build lineup with explicit FLEX handling"""
+        lineup = {}
+        
+        # First assign all non-FLEX players
+        for player in selected_players:
+            if not player.get('is_flex'):
+                pos = player['player_position_id']
+                if pos == 'QB':
+                    lineup['QB'] = player
+                elif pos == 'DST':
+                    lineup['DST'] = player
+                elif pos == 'TE':
+                    lineup['TE'] = player
+                elif pos == 'RB':
+                    if 'RB1' not in lineup:
+                        lineup['RB1'] = player
+                    else:
+                        lineup['RB2'] = player
+                elif pos == 'WR':
+                    if 'WR1' not in lineup:
+                        lineup['WR1'] = player
+                    elif 'WR2' not in lineup:
+                        lineup['WR2'] = player
+                    else:
+                        lineup['WR3'] = player
+        
+        # Assign FLEX player
+        for player in selected_players:
+            if player.get('is_flex'):
+                lineup['FLEX'] = player
+                break
+                
+        return lineup
 
 # Initialize both optimizer agents
 original_optimizer_agent = LineupOptimizerAgent(
