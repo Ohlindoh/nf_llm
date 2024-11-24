@@ -429,7 +429,7 @@ class EnhancedLineupOptimizerAgent(LineupOptimizerAgent):
                         player_copy['is_flex'] = (flex_val > 0.5)
                         selected_players.append(player_copy)
 
-                lineup = self.build_lineup_from_selected(selected_players)
+                lineup = self.build_lineup(selected_players)
                 
                 if 'error' not in lineup:
                     score = sum(float(player['projected_points']) for player in lineup.values())
@@ -439,39 +439,51 @@ class EnhancedLineupOptimizerAgent(LineupOptimizerAgent):
 
         return best_lineup if best_lineup else {'error': "Optimization failed for all scenarios"}
 
-    def build_lineup_from_selected(self, selected_players):
-        """Build lineup with explicit FLEX handling"""
+    def build_lineup(self, selected_players):
+        """Build lineup from pre-selected players"""
+        # Sort by projected points
+        selected_players.sort(key=lambda x: x['projected_points'], reverse=True)
+        
         lineup = {}
-        
-        # First assign all non-FLEX players
-        for player in selected_players:
-            if not player.get('is_flex'):
-                pos = player['player_position_id']
-                if pos == 'QB':
-                    lineup['QB'] = player
-                elif pos == 'DST':
-                    lineup['DST'] = player
-                elif pos == 'TE':
-                    lineup['TE'] = player
-                elif pos == 'RB':
-                    if 'RB1' not in lineup:
-                        lineup['RB1'] = player
-                    else:
-                        lineup['RB2'] = player
-                elif pos == 'WR':
-                    if 'WR1' not in lineup:
-                        lineup['WR1'] = player
-                    elif 'WR2' not in lineup:
-                        lineup['WR2'] = player
-                    else:
-                        lineup['WR3'] = player
-        
-        # Assign FLEX player
-        for player in selected_players:
-            if player.get('is_flex'):
-                lineup['FLEX'] = player
-                break
-                
+        remaining_players = []
+
+        # First pass: Fill QB and DST
+        for player in selected_players[:]:
+            if player['player_position_id'] == 'QB' and 'QB' not in lineup:
+                lineup['QB'] = player
+            elif player['player_position_id'] == 'DST' and 'DST' not in lineup:
+                lineup['DST'] = player
+            else:
+                remaining_players.append(player)
+
+        # Second pass: Fill RB/WR/TE positions with best available
+        rb_count = 0
+        wr_count = 0
+        te_filled = False
+
+        for player in remaining_players[:]:
+            if player['player_position_id'] == 'RB' and rb_count < 2:
+                lineup[f'RB{rb_count + 1}'] = player
+                rb_count += 1
+                remaining_players.remove(player)
+            elif player['player_position_id'] == 'WR' and wr_count < 3:
+                lineup[f'WR{wr_count + 1}'] = player
+                wr_count += 1
+                remaining_players.remove(player)
+            elif player['player_position_id'] == 'TE' and not te_filled:
+                lineup['TE'] = player
+                te_filled = True
+                remaining_players.remove(player)
+
+        # Last pass: Best remaining player goes to FLEX
+        if remaining_players:
+            lineup['FLEX'] = max(remaining_players, key=lambda x: x['projected_points'])
+
+        # Verify all required positions are filled
+        required_positions = {'QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DST'}
+        if set(lineup.keys()) != required_positions:
+            return {'error': 'Could not fill all required positions'}
+
         return lineup
 
 # Initialize both optimizer agents
