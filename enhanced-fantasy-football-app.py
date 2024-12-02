@@ -164,86 +164,50 @@ class LineupOptimizerAgent:
         return bonus
 
     def build_lineup(self, player_vars, players):
-        """
-        Build lineup with correct position assignments.
-        Added debugging and strict position handling.
-        """
-        # Step 1: Collect all selected players with their scores
-        selected_players = []
-        for player in players:
-            if abs(player_vars[player['player_name'], player['player_position_id']].varValue - 1.0) < 1e-7:  # Handle floating point comparison
-                selected_players.append(player)
+        # Get all selected players
+        selected_players = [
+            player for player in players 
+            if player_vars[player['player_name'], player['player_position_id']].varValue == 1
+        ]
         
-        # Verify we have exactly 9 players
-        if len(selected_players) != 9:
-            raise ValueError(f"Expected 9 players, got {len(selected_players)}")
+        # Sort by projected points
+        selected_players.sort(key=lambda x: float(x['projected_points']), reverse=True)
         
         lineup = {}
-        position_groups = {
-            'RB': [],
-            'WR': [],
-            'TE': []
-        }
-        
-        # Step 2: Initial sort and position grouping
-        for player in selected_players:
-            pos = player['player_position_id']
-            if pos == 'QB':
+        remaining_players = []
+
+        # First pass: Fill QB and DST
+        for player in selected_players[:]:
+            if player['player_position_id'] == 'QB' and 'QB' not in lineup:
                 lineup['QB'] = player
-            elif pos == 'DST':
+            elif player['player_position_id'] == 'DST' and 'DST' not in lineup:
                 lineup['DST'] = player
-            elif pos in position_groups:
-                position_groups[pos].append(player)
-        
-        # Sort all position groups by projected points
-        for pos in position_groups:
-            position_groups[pos].sort(key=lambda x: float(x['projected_points']), reverse=True)
-        
-        # Step 3: Fill required positions
-        # RBs (minimum 2)
-        rbs = position_groups['RB']
-        if len(rbs) >= 2:
-            lineup['RB1'] = rbs[0]
-            lineup['RB2'] = rbs[1]
-            position_groups['RB'] = rbs[2:]  # Remaining RBs
-        else:
-            raise ValueError(f"Not enough RBs: {len(rbs)}")
-        
-        # WRs (minimum 3)
-        wrs = position_groups['WR']
-        if len(wrs) >= 3:
-            lineup['WR1'] = wrs[0]
-            lineup['WR2'] = wrs[1]
-            lineup['WR3'] = wrs[2]
-            position_groups['WR'] = wrs[3:]  # Remaining WRs
-        else:
-            raise ValueError(f"Not enough WRs: {len(wrs)}")
-        
-        # TE (minimum 1)
-        tes = position_groups['TE']
-        if tes:
-            lineup['TE'] = tes[0]
-            position_groups['TE'] = tes[1:]  # Remaining TEs
-        else:
-            raise ValueError("No TE found")
-        
-        # Step 4: Handle FLEX position
-        # Collect all remaining players
-        flex_candidates = []
-        for pos, players in position_groups.items():
-            flex_candidates.extend(players)
-        
-        # Sort flex candidates by projected points and take the highest
-        if flex_candidates:
-            flex_candidates.sort(key=lambda x: float(x['projected_points']), reverse=True)
-            lineup['FLEX'] = flex_candidates[0]
-        
-        # Verify all required positions are filled
-        required_positions = {'QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DST'}
-        filled_positions = set(lineup.keys())
-        if filled_positions != required_positions:
-            raise ValueError(f"Missing positions: {required_positions - filled_positions}")
-        
+            else:
+                remaining_players.append(player)
+
+        # Second pass: Fill RB/WR/TE positions with best available
+        rb_count = 0
+        wr_count = 0
+        te_filled = False
+
+        for player in remaining_players[:]:
+            if player['player_position_id'] == 'RB' and rb_count < 2:
+                lineup[f'RB{rb_count + 1}'] = player
+                rb_count += 1
+                remaining_players.remove(player)
+            elif player['player_position_id'] == 'WR' and wr_count < 3:
+                lineup[f'WR{wr_count + 1}'] = player
+                wr_count += 1
+                remaining_players.remove(player)
+            elif player['player_position_id'] == 'TE' and not te_filled:
+                lineup['TE'] = player
+                te_filled = True
+                remaining_players.remove(player)
+
+        # Last pass: Best remaining player goes to FLEX
+        if remaining_players:
+            lineup['FLEX'] = max(remaining_players, key=lambda x: float(x['projected_points']))
+
         return lineup
 
     def generate_lineups(self, constraints: dict) -> list:
@@ -440,9 +404,8 @@ class EnhancedLineupOptimizerAgent(LineupOptimizerAgent):
         return best_lineup if best_lineup else {'error': "Optimization failed for all scenarios"}
 
     def build_lineup(self, selected_players):
-        """Build lineup from pre-selected players"""
         # Sort by projected points
-        selected_players.sort(key=lambda x: x['projected_points'], reverse=True)
+        selected_players.sort(key=lambda x: float(x['projected_points']), reverse=True)
         
         lineup = {}
         remaining_players = []
@@ -477,12 +440,7 @@ class EnhancedLineupOptimizerAgent(LineupOptimizerAgent):
 
         # Last pass: Best remaining player goes to FLEX
         if remaining_players:
-            lineup['FLEX'] = max(remaining_players, key=lambda x: x['projected_points'])
-
-        # Verify all required positions are filled
-        required_positions = {'QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DST'}
-        if set(lineup.keys()) != required_positions:
-            return {'error': 'Could not fill all required positions'}
+            lineup['FLEX'] = max(remaining_players, key=lambda x: float(x['projected_points']))
 
         return lineup
 
