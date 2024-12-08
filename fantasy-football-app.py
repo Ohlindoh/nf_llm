@@ -9,7 +9,7 @@ from autogen import AssistantAgent, UserProxyAgent
 
 # Initialize LLM configuration
 llm_config = {
-    "model": "gpt-4",
+    "model": "gpt-4o-mini",
     "api_key": os.environ.get("OPENAI_API_KEY"),
     "temperature": 0,
 }
@@ -52,29 +52,102 @@ user_input_agent = AssistantAgent(
     name="UserInputAgent",
     llm_config=llm_config,
     system_message="""
-You are an assistant that processes user requests for fantasy football lineups.
-Parse the user's natural language input and convert it into a structured JSON format for lineup optimization.
-If the input doesn't contain specific constraints, return an empty JSON object.
-Use the following examples as a guide:
+        You are an assistant that processes user requests for fantasy football lineups.
+        Parse the user's natural language input and convert it into a structured JSON format for lineup optimization.
+        If the input doesn't contain specific constraints, return an empty JSON object.
+        Use the following examples as a guide:
 
-Input: "I want Justin Jefferson and Dalvin Cook in my lineup"
-Output: {"must_include": ["justinjefferson", "dalvincook"]}
+        Input: "I want Justin Jefferson and Dalvin Cook in my lineup"
+        Output: {"must_include": ["justinjefferson", "dalvincook"]}
 
-Input: "Avoid players from the Jets"
-Output: {"avoid_teams": ["nyj"]}
+        Input: "Avoid players from the Jets"
+        Output: {"avoid_teams": ["nyj"]}
 
-Input: "Focus on stacking players from Kansas City Chiefs"
-Output: {"stack_teams": ["kc"]}
+        Input: "Focus on stacking players from Kansas City Chiefs"
+        Output: {"stack_teams": ["kc"]}
 
-Input: "Limit exposure of Patrick Mahomes to 50%"
-Output: {"player_exposure_limits": {"patrickmahomes": 0.5}}
+        Input: "Limit exposure of Patrick Mahomes to 50%"
+        Output: {"player_exposure_limits": {"patrickmahomes": 0.5}}
 
-Input: "Generate 5 unique lineups"
-Output: {"num_lineups": 5}
+        Input: "Generate 5 unique lineups"
+        Output: {"num_lineups": 5}
 
-Provide your output as a valid JSON object.
-"""
+        Provide your output as a valid JSON object.
+        """
+        )
+
+# New: Strategy Agent
+strategy_agent = AssistantAgent(
+    name="StrategyAgent",
+    llm_config=llm_config,
+    system_message="""
+        You are an expert DFS Strategy Analyst specializing in NFL lineup optimization. Your role is to analyze player data and make strategic recommendations based on the following data points:
+        - Player Name
+        - Position (QB/RB/WR/TE)
+        - Team
+        - Positional Rank
+        - Projected Points
+        - Expert Consensus Rank (ECR)
+        - Salary
+
+        Key Analysis Framework:
+
+        1. Value-Based Analysis:
+        - Calculate points per dollar spent (Projected Points / Salary * 1000)
+        - Identify players with positive rank vs. salary disparities
+        - Flag value plays where ECR ranking suggests higher potential than positional rank
+
+        2. Stack Identification:
+        - Identify affordable QB-WR/TE combinations from same team
+        - Flag high-upside correlations within salary constraints
+        - Suggest bring-back options that fit within remaining salary
+
+        When analyzing players, evaluate:
+        1. Salary vs. Positional Rank efficiency
+        2. ECR vs. Positional Rank discrepancies that suggest value
+        3. Projected points relative to salary tier
+        4. Stack potential within salary constraints
+
+        Provide specific recommendations including:
+        - Top value plays by position
+        - Optimal salary allocation strategy
+        - Strategic stacking opportunities
+        - Salary-saving options that enable premium plays
+        """
 )
+
+def suggest_strategies_with_agent(data):
+    data_summary = data[['player_name', 'team', 'player_position_id', 'salary', 'projected_points', 'value']].to_dict('records')
+    # Use user_proxy to send message to strategy_agent
+    strategy_agent.reset()
+    user_message = f"Analyze the following dataset and provide strategy suggestions:\n{json.dumps(data_summary)}"
+    user_proxy.send(user_message, strategy_agent, request_reply=True)  # Note: specify recipient here
+    return strategy_agent.last_message()['content']
+
+
+def explain_lineup_with_agent(lineup, constraints):
+    lineup_summary = []
+    for pos, player in lineup.items():
+        if player:
+            lineup_summary.append({
+                'position': pos,
+                'player_name': player['player_name'],
+                'team': player['team'],
+                'player_position_id': player['player_position_id'],
+                'salary': player['salary'],
+                'projected_points': player['projected_points'],
+                'value': player['projected_points']/player['salary'] if player['salary'] > 0 else 0
+            })
+
+    strategy_agent.reset()
+    user_message = f"""
+        Explain why the following lineup was created given these constraints:
+        Constraints: {json.dumps(constraints)}
+        Lineup: {json.dumps(lineup_summary)}
+        """
+    user_proxy.send(user_message, strategy_agent, request_reply=True)  # Specify recipient (strategy_agent)
+    return strategy_agent.last_message()['content']
+
 
 class LineupOptimizerAgent:
     def __init__(self, name, data):
@@ -392,8 +465,22 @@ def display_player_exposure(optimizer_agent):
 # Create UI using Streamlit
 def create_fantasy_football_ui():
     st.title('Daily Fantasy Football Lineup Generator')
+    
+    # Strategy Suggestions Section
+    with st.expander("View Strategy Suggestions (Optional)", expanded=False):
+        st.subheader("Strategy Suggestions")
+        st.write("Click the button below to generate strategy suggestions based on the current data.")
+        generate_strategies_button = st.button("Generate Strategy Suggestions")
+        
+        if generate_strategies_button:
+            with st.spinner("Generating strategy suggestions..."):
+                strategies_text = suggest_strategies_with_agent(data)
+            # Use markdown to render nicely formatted text
+            st.markdown(strategies_text)
+        else:
+            st.markdown("_No strategy suggestions generated yet. Click the button above._")
 
-    # Add a collapsible section for undervalued players
+    # Undervalued players section
     with st.expander("View Most Undervalued Players", expanded=False):
         st.subheader('Most Undervalued Players')
         undervalued_players = get_undervalued_players(data)
@@ -404,8 +491,8 @@ def create_fantasy_football_ui():
                 'projected_points': '{:.2f}',
                 'value': '{:.4f}'
             }))
-            st.write("---")  # Add a separator between positions
-
+            st.write("---")
+    
     user_input = st.text_area('Enter your lineup requests:', '', height=75)
     num_lineups = st.number_input('Number of Lineups', min_value=1, max_value=150, value=1)
     max_exposure = st.slider('Maximum Player Exposure (%)', min_value=0, max_value=100, value=30)
@@ -413,10 +500,9 @@ def create_fantasy_football_ui():
     generate_button = st.button('Generate Lineup(s)')
 
     if generate_button:
-        # Process user input and strategies
         constraints = process_user_input_and_strategies(user_proxy, user_input_agent, user_input)
         constraints['num_lineups'] = num_lineups
-        constraints['max_exposure'] = max_exposure / 100  # Convert to decimal
+        constraints['max_exposure'] = max_exposure / 100
 
         lineups = optimizer_agent.generate_lineups(constraints)
 
@@ -426,12 +512,17 @@ def create_fantasy_football_ui():
             for idx, lineup in enumerate(lineups):
                 st.subheader(f'Lineup {idx + 1}')
                 display_lineup(lineup)
+                explanation = explain_lineup_with_agent(lineup, constraints)
+                with st.expander("View Lineup Explanation", expanded=True):
+                    st.markdown(explanation)
+
             display_player_exposure(optimizer_agent)
-            
+
     if st.button('Reset'):
         optimizer_agent.previous_lineups = []
         optimizer_agent.player_usage = {}
-        st.experimental_rerun()                                                     
+        st.experimental_rerun()
+                                                
 # Run the app
 if __name__ == "__main__":
     create_fantasy_football_ui()
