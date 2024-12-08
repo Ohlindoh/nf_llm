@@ -76,189 +76,12 @@ Provide your output as a valid JSON object.
 """
 )
 
-# Original LineupOptimizerAgent class
 class LineupOptimizerAgent:
     def __init__(self, name, data):
         self.name = name
         self.data = data
         self.previous_lineups = []
-        self.player_usage = {}  # Track player usage
-
-    def optimize_lineup(self, constraints: dict, strategies: dict = {}, diversity_constraint: set = None) -> dict:
-        players = self.data.to_dict('records')
-        prob = pulp.LpProblem("Fantasy Football", pulp.LpMaximize)
-
-        player_vars = pulp.LpVariable.dicts("players", 
-                                            ((p['player_name'], p['player_position_id']) for p in players), 
-                                            cat='Binary')
-
-        # Objective: Maximize projected points with strategy bonuses
-        prob += pulp.lpSum([
-            (player['projected_points'] + self.apply_strategy_bonus(player, strategies)) * 
-            player_vars[player['player_name'], player['player_position_id']]
-            for player in players
-        ])
-
-        # Salary cap constraint
-        prob += pulp.lpSum([
-            player['salary'] * player_vars[player['player_name'], player['player_position_id']] 
-            for player in players
-        ]) <= 50000
-
-        # Position constraints
-        prob += pulp.lpSum([player_vars[p['player_name'], 'QB'] for p in players if p['player_position_id'] == 'QB']) == 1
-        prob += pulp.lpSum([player_vars[p['player_name'], 'RB'] for p in players if p['player_position_id'] == 'RB']) >= 2
-        prob += pulp.lpSum([player_vars[p['player_name'], 'WR'] for p in players if p['player_position_id'] == 'WR']) >= 3
-        prob += pulp.lpSum([player_vars[p['player_name'], 'TE'] for p in players if p['player_position_id'] == 'TE']) >= 1
-        prob += pulp.lpSum([player_vars[p['player_name'], 'DST'] for p in players if p['player_position_id'] == 'DST']) == 1
-
-        # Total players constraint
-        prob += pulp.lpSum([player_vars[p['player_name'], p['player_position_id']] for p in players]) == 9
-
-        # FLEX position constraints
-        prob += pulp.lpSum([
-            player_vars[p['player_name'], p['player_position_id']]
-            for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']
-        ]) >= 7
-
-        # Apply must_include constraints
-        if 'must_include' in constraints:
-            for player_name in constraints['must_include']:
-                prob += pulp.lpSum([
-                    player_vars[p['player_name'], p['player_position_id']] 
-                    for p in players if p['player_name'] == player_name
-                ]) == 1
-
-        # Apply avoid_teams constraints
-        if 'avoid_teams' in constraints:
-            for team in constraints['avoid_teams']:
-                prob += pulp.lpSum([
-                    player_vars[p['player_name'], p['player_position_id']]
-                    for p in players if p['team'] == team.lower()
-                ]) == 0
-
-        # Apply diversity constraints
-        if diversity_constraint:
-            for player_name in diversity_constraint:
-                prob += pulp.lpSum([
-                    player_vars[player_name, p['player_position_id']]
-                    for p in players if p['player_name'] == player_name
-                ]) == 0
-
-        # Solve the problem
-        prob.solve()
-
-        if pulp.LpStatus[prob.status] != 'Optimal':
-            return {'error': f"Optimization failed: {pulp.LpStatus[prob.status]}"}
-
-        return self.build_lineup(player_vars, players)
-
-    def apply_strategy_bonus(self, player, strategies):
-        bonus = 0
-        if 'stack_teams' in strategies and player['team'] in [team.lower() for team in strategies['stack_teams']]:
-            bonus += 1.5
-        if 'value_players' in strategies and player['player_name'] in strategies['value_players']:
-            bonus += 1.0
-        if 'avoid_players' in strategies and player['player_name'] in strategies['avoid_players']:
-            bonus -= 2.0
-        return bonus
-
-    def build_lineup(self, player_vars, players):
-        # Get all selected players
-        selected_players = [
-            player for player in players 
-            if player_vars[player['player_name'], player['player_position_id']].varValue == 1
-        ]
-        
-        # Sort by projected points
-        selected_players.sort(key=lambda x: float(x['projected_points']), reverse=True)
-        
-        lineup = {}
-        remaining_players = []
-
-        # First pass: Fill QB and DST
-        for player in selected_players[:]:
-            if player['player_position_id'] == 'QB' and 'QB' not in lineup:
-                lineup['QB'] = player
-            elif player['player_position_id'] == 'DST' and 'DST' not in lineup:
-                lineup['DST'] = player
-            else:
-                remaining_players.append(player)
-
-        # Second pass: Fill RB/WR/TE positions with best available
-        rb_count = 0
-        wr_count = 0
-        te_filled = False
-
-        for player in remaining_players[:]:
-            if player['player_position_id'] == 'RB' and rb_count < 2:
-                lineup[f'RB{rb_count + 1}'] = player
-                rb_count += 1
-                remaining_players.remove(player)
-            elif player['player_position_id'] == 'WR' and wr_count < 3:
-                lineup[f'WR{wr_count + 1}'] = player
-                wr_count += 1
-                remaining_players.remove(player)
-            elif player['player_position_id'] == 'TE' and not te_filled:
-                lineup['TE'] = player
-                te_filled = True
-                remaining_players.remove(player)
-
-        # Last pass: Best remaining player goes to FLEX
-        if remaining_players:
-            lineup['FLEX'] = max(remaining_players, key=lambda x: float(x['projected_points']))
-
-        return lineup
-
-    def generate_lineups(self, constraints: dict) -> list:
-        num_lineups = int(constraints.get('num_lineups', 1))
-        max_exposure = constraints.get('max_exposure', 1.0)
-        lineups = []
-
-        for i in range(num_lineups):
-            exposure_constraint = set()
-            # Update exposure constraints based on current player usage
-            for player_name, count in self.player_usage.items():
-                exposure = count / (i + 1)
-                if exposure >= max_exposure:
-                    exposure_constraint.add(player_name)
-
-            # Generate lineup with current exposure constraints
-            lineup = self.optimize_lineup(
-                constraints,
-                strategies=constraints,  # Use constraints as strategies if applicable
-                diversity_constraint=exposure_constraint
-            )
-
-            if 'error' in lineup:
-                st.warning(f"Lineup {i + 1} could not be generated: {lineup['error']}")
-                continue
-
-            lineups.append(lineup)
-            self.previous_lineups.append(lineup)
-
-            # Update player usage
-            for player in lineup.values():
-                if player:
-                    player_name = player['player_name']
-                    self.player_usage[player_name] = self.player_usage.get(player_name, 0) + 1
-
-        return lineups
-    
-    def get_average_projected_points(self, player_name):
-        total_points = 0
-        appearances = 0
-        for lineup in self.previous_lineups:
-            for player in lineup.values():
-                if player and player['player_name'] == player_name:
-                    total_points += player['projected_points']
-                    appearances += 1
-        return total_points / appearances if appearances > 0 else 0
-
-# Enhanced LineupOptimizerAgent class
-class EnhancedLineupOptimizerAgent(LineupOptimizerAgent):
-    def __init__(self, name, data):
-        super().__init__(name, data)
+        self.player_usage = {}
 
     def generate_scenarios(self, num_scenarios=100):
         scenarios = []
@@ -444,14 +267,54 @@ class EnhancedLineupOptimizerAgent(LineupOptimizerAgent):
 
         return lineup
 
-# Initialize both optimizer agents
-original_optimizer_agent = LineupOptimizerAgent(
-    name="OriginalLineupOptimizer",
-    data=data
-)
+    def generate_lineups(self, constraints: dict) -> list:
+        num_lineups = int(constraints.get('num_lineups', 1))
+        max_exposure = constraints.get('max_exposure', 1.0)
+        lineups = []
 
-enhanced_optimizer_agent = EnhancedLineupOptimizerAgent(
-    name="EnhancedLineupOptimizer",
+        for i in range(num_lineups):
+            exposure_constraint = set()
+            # Update exposure constraints based on current player usage
+            for player_name, count in self.player_usage.items():
+                exposure = count / (i + 1)
+                if exposure >= max_exposure:
+                    exposure_constraint.add(player_name)
+
+            # Generate lineup with current exposure constraints
+            lineup = self.optimize_lineup(
+                constraints,
+                strategies=constraints,  # Use constraints as strategies if applicable
+                diversity_constraint=exposure_constraint
+            )
+
+            if 'error' in lineup:
+                st.warning(f"Lineup {i + 1} could not be generated: {lineup['error']}")
+                continue
+
+            lineups.append(lineup)
+            self.previous_lineups.append(lineup)
+
+            # Update player usage
+            for player in lineup.values():
+                if player:
+                    player_name = player['player_name']
+                    self.player_usage[player_name] = self.player_usage.get(player_name, 0) + 1
+
+        return lineups
+    
+    def get_average_projected_points(self, player_name):
+        total_points = 0
+        appearances = 0
+        for lineup in self.previous_lineups:
+            for player in lineup.values():
+                if player and player['player_name'] == player_name:
+                    total_points += player['projected_points']
+                    appearances += 1
+        return total_points / appearances if appearances > 0 else 0
+
+# Initialize both optimizer agents
+optimizer_agent = LineupOptimizerAgent(
+    name="LineupOptimizer",
     data=data
 )
 
@@ -547,12 +410,6 @@ def create_fantasy_football_ui():
     num_lineups = st.number_input('Number of Lineups', min_value=1, max_value=150, value=1)
     max_exposure = st.slider('Maximum Player Exposure (%)', min_value=0, max_value=100, value=30)
 
-    # Add a selector for choosing between original and enhanced optimizer
-    optimizer_choice = st.radio(
-        "Choose Optimizer",
-        ('Original', 'Enhanced')
-    )
-
     generate_button = st.button('Generate Lineup(s)')
 
     if generate_button:
@@ -561,26 +418,20 @@ def create_fantasy_football_ui():
         constraints['num_lineups'] = num_lineups
         constraints['max_exposure'] = max_exposure / 100  # Convert to decimal
 
-        # Choose the appropriate optimizer based on user selection
-        optimizer_agent = original_optimizer_agent if optimizer_choice == 'Original' else enhanced_optimizer_agent
-
         lineups = optimizer_agent.generate_lineups(constraints)
 
         if not lineups:
             st.error("No lineups were generated.")
         else:
             for idx, lineup in enumerate(lineups):
-                st.subheader(f'Lineup {idx + 1} ({optimizer_choice} Optimizer)')
+                st.subheader(f'Lineup {idx + 1}')
                 display_lineup(lineup)
             display_player_exposure(optimizer_agent)
             
     if st.button('Reset'):
-        original_optimizer_agent.previous_lineups = []
-        original_optimizer_agent.player_usage = {}
-        enhanced_optimizer_agent.previous_lineups = []
-        enhanced_optimizer_agent.player_usage = {}
-        st.experimental_rerun()
-
+        optimizer_agent.previous_lineups = []
+        optimizer_agent.player_usage = {}
+        st.experimental_rerun()                                                     
 # Run the app
 if __name__ == "__main__":
     create_fantasy_football_ui()
