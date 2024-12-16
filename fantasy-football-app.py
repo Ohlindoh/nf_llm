@@ -76,78 +76,208 @@ user_input_agent = AssistantAgent(
         """
         )
 
-# New: Strategy Agent
 strategy_agent = AssistantAgent(
     name="StrategyAgent",
     llm_config=llm_config,
-    system_message="""
-        You are an expert DFS Strategy Analyst specializing in NFL lineup optimization. Your role is to analyze player data and make strategic recommendations based on the following data points:
-        - Player Name
-        - Position (QB/RB/WR/TE)
-        - Team
-        - Positional Rank
-        - Projected Points
-        - Expert Consensus Rank (ECR)
-        - Salary
+    system_message="""You are an expert DFS Strategy Analyst specializing in NFL lineup optimization.
+        Your analysis combines value-based metrics, game theory, and correlation analysis to find hidden opportunities.
 
-        Key Analysis Framework:
-
+        Key Analysis Areas:
         1. Value-Based Analysis:
-        - Calculate points per dollar spent (Projected Points / Salary * 1000)
-        - Identify players with positive rank vs. salary disparities
-        - Flag value plays where ECR ranking suggests higher potential than positional rank
+            - Calculate points per dollar (Projected Points / Salary * 1000)
+            - Identify players with positive rank vs. salary disparities
+            - Flag value plays where ECR ranking suggests higher potential than salary indicates
+            - Find players outperforming their salary tier expectations
+            - Spot positional advantages where pricing inefficiencies exist
 
-        2. Stack Identification:
-        - Identify affordable QB-WR/TE combinations from same team
-        - Flag high-upside correlations within salary constraints
-        - Suggest bring-back options that fit within remaining salary
+        2. Game Theory Advantages:
+            - Identify high-upside players likely to be under-owned
+            - Find optimal contrarian stacks that maximize differentiation
+            - Spot salary-saving combinations that enable unique roster constructions
+            - Calculate ownership leverage points
+            - Identify tournament vs. cash game plays
 
-        When analyzing players, evaluate:
-        1. Salary vs. Positional Rank efficiency
-        2. ECR vs. Positional Rank discrepancies that suggest value
-        3. Projected points relative to salary tier
-        4. Stack potential within salary constraints
+        3. Stack Analysis:
+            - Calculate optimal QB-WR/TE combinations considering salary and projected ownership
+            - Identify bring-back opportunities from opposing teams
+            - Find correlated defensive matchups
+            - Calculate stack leverage scores
+            - Evaluate game environment factors
 
-        Provide specific recommendations including:
-        - Top value plays by position
-        - Optimal salary allocation strategy
-        - Strategic stacking opportunities
-        - Salary-saving options that enable premium plays
-        """
-)
+        4. Market Inefficiency Analysis:
+            - Compare salary vs. projected points across positions
+            - Identify pricing gaps that enable unique roster constructions
+            - Calculate position-specific value thresholds
+            - Find salary tier arbitrage opportunities
+            - Spot week-specific pricing inefficiencies
+
+        5. Advanced Metrics:
+            - Calculate z-scores within salary tiers
+            - Evaluate correlation-adjusted projections
+            - Analyze historical performance patterns
+            - Consider game script implications
+            - Factor in opposing defense strength
+
+        For each analysis component:
+        - Provide specific actionable player recommendations
+        - Include exact salary implications
+        - Consider correlation effects
+        - Factor in ownership projections
+        - Assess risk-reward scenarios
+        
+        When analyzing data, specifically look for:
+        1. Salary Tier Analysis:
+            - Players outperforming their salary tier by >1 standard deviation
+            - Value discrepancies between positions
+            - Opportunities for salary arbitrage
+
+        2. Correlation Opportunities:
+            - QB-WR/TE stacks under 35% of total salary cap
+            - Game stacks with positive game script correlation
+            - Defense/QB correlation opportunities
+
+        3. Tournament Plays:
+            - High ceiling, low floor players
+            - Unique roster construction paths
+            - Leverage against popular plays
+
+        4. Hidden Value:
+            - Secondary receivers in good matchups
+            - Backup RBs with increased opportunity
+            - Defensive matchups against weak offenses
+
+        Always provide specific, actionable insights including:
+        - Exact player names and reasoning
+        - Salary implications of recommendations
+        - Expected ownership impact
+        - Correlation benefits
+        - Risk assessment
+        - Specific lineup construction strategies
+
+        Format your analysis with clear sections using emojis:
+        🎯 TOP VALUE PLAYS
+        🎲 CONTRARIAN OPPORTUNITIES
+        🔄 STACKING ANALYSIS
+        💰 MARKET INEFFICIENCIES
+        🎮 LINEUP STRATEGIES
+
+        Base all recommendations on data while incorporating NFL game theory and strategic concepts."""
+    )
+def analyze_data_for_strategy(data: pd.DataFrame) -> dict:
+    """Analyze fantasy football data for strategic insights."""
+    analysis = {}
+    
+    # Calculate base metrics
+    data['value_score'] = data['projected_points'] / data['salary']
+    data['salary_tier'] = pd.qcut(data['salary'], q=4, labels=['Budget', 'Value', 'Premium', 'Elite'])
+    
+    # 1. Value Plays Analysis
+    value_plays = {}
+    for position in ['QB', 'RB', 'WR', 'TE', 'DST']:
+        pos_data = data[data['player_position_id'] == position].copy()
+        if not pos_data.empty:
+            pos_data['points_zscore'] = (pos_data['projected_points'] - pos_data['projected_points'].mean()) / pos_data['projected_points'].std()
+            value_plays[position] = pos_data[pos_data['points_zscore'] > 1][
+                ['player_name', 'salary', 'projected_points', 'points_zscore']
+            ].to_dict('records')
+    analysis['value_plays'] = value_plays
+
+    # 2. Stack Analysis
+    stacks = []
+    qb_data = data[data['player_position_id'] == 'QB']
+    receiver_data = data[data['player_position_id'].isin(['WR', 'TE'])]
+    
+    for _, qb in qb_data.iterrows():
+        team_receivers = receiver_data[receiver_data['team'] == qb['team']]
+        for _, receiver in team_receivers.iterrows():
+            combined_salary = qb['salary'] + receiver['salary']
+            if combined_salary <= 17500:  # 35% of salary cap
+                stacks.append({
+                    'qb': qb['player_name'],
+                    'receiver': receiver['player_name'],
+                    'total_salary': combined_salary,
+                    'projected_points': qb['projected_points'] + receiver['projected_points'] * 1.1  # 10% correlation bonus
+                })
+    analysis['stacks'] = sorted(stacks, key=lambda x: x['projected_points'], reverse=True)
+
+    # 3. Market Inefficiencies
+    inefficiencies = {}
+    for position in ['QB', 'RB', 'WR', 'TE', 'DST']:
+        pos_data = data[data['player_position_id'] == position].copy()
+        if not pos_data.empty:
+            pos_data['expected_points'] = pos_data['salary'].transform(
+                lambda x: np.polyval(np.polyfit(pos_data['salary'], pos_data['projected_points'], 1), x)
+            )
+            pos_data['points_vs_expected'] = pos_data['projected_points'] - pos_data['expected_points']
+            inefficiencies[position] = pos_data[
+                pos_data['points_vs_expected'] > pos_data['points_vs_expected'].quantile(0.8)
+            ][['player_name', 'salary', 'projected_points', 'points_vs_expected']].to_dict('records')
+    analysis['inefficiencies'] = inefficiencies
+
+    # 4. Tournament Plays
+    tournament_plays = {}
+    for position in ['QB', 'RB', 'WR', 'TE', 'DST']:
+        pos_data = data[data['player_position_id'] == position].copy()
+        if not pos_data.empty:
+            # Find high-upside, potentially low-owned players
+            pos_data['ownership_proxy'] = pos_data['value_score'] / pos_data['value_score'].mean()
+            tournament_plays[position] = pos_data[
+                (pos_data['projected_points'] > pos_data['projected_points'].quantile(0.7)) &
+                (pos_data['ownership_proxy'] < pos_data['ownership_proxy'].quantile(0.3))
+            ][['player_name', 'salary', 'projected_points']].to_dict('records')
+    analysis['tournament_plays'] = tournament_plays
+
+    return analysis
 
 def suggest_strategies_with_agent(data):
-    data_summary = data[['player_name', 'team', 'player_position_id', 'salary', 'projected_points', 'value']].to_dict('records')
-    # Use user_proxy to send message to strategy_agent
-    strategy_agent.reset()
-    user_message = f"Analyze the following dataset and provide strategy suggestions:\n{json.dumps(data_summary)}"
-    user_proxy.send(user_message, strategy_agent, request_reply=True)  # Note: specify recipient here
-    return strategy_agent.last_message()['content']
+    """Generate strategy suggestions using the enhanced analysis."""
+    analysis = analyze_data_for_strategy(data)
+    
+    # Format the analysis into a clear message
+    message = []
+    
+    # 1. Value Plays
+    message.append("🎯 TOP VALUE PLAYS BY POSITION:")
+    for position, plays in analysis['value_plays'].items():
+        if plays:
+            message.append(f"\n{position} Standouts:")
+            for play in plays[:3]:  # Top 3 per position
+                message.append(
+                    f"- {play['player_name']}: ${play['salary']:,} | "
+                    f"{play['projected_points']:.1f} pts | "
+                    f"Z-score: {play['points_zscore']:.2f}"
+                )
 
+    # 2. Stacking Opportunities
+    message.append("\n\n🔄 OPTIMAL STACKING OPPORTUNITIES:")
+    for stack in analysis['stacks'][:5]:  # Top 5 stacks
+        message.append(
+            f"- Stack: {stack['qb']} + {stack['receiver']}\n"
+            f"  Combined Salary: ${stack['total_salary']:,} | "
+            f"Projected: {stack['projected_points']:.1f} pts"
+        )
 
-def explain_lineup_with_agent(lineup, constraints):
-    lineup_summary = []
-    for pos, player in lineup.items():
-        if player:
-            lineup_summary.append({
-                'position': pos,
-                'player_name': player['player_name'],
-                'team': player['team'],
-                'player_position_id': player['player_position_id'],
-                'salary': player['salary'],
-                'projected_points': player['projected_points'],
-                'value': player['projected_points']/player['salary'] if player['salary'] > 0 else 0
-            })
+    # 3. Market Inefficiencies
+    message.append("\n\n💰 MARKET INEFFICIENCIES TO EXPLOIT:")
+    for position, plays in analysis['inefficiencies'].items():
+        if plays:
+            for play in plays[:2]:  # Top 2 per position
+                message.append(
+                    f"- {play['player_name']} ({position}): "
+                    f"Outperforming salary by {play['points_vs_expected']:.1f} pts"
+                )
 
-    strategy_agent.reset()
-    user_message = f"""
-        Explain why the following lineup was created given these constraints:
-        Constraints: {json.dumps(constraints)}
-        Lineup: {json.dumps(lineup_summary)}
-        """
-    user_proxy.send(user_message, strategy_agent, request_reply=True)  # Specify recipient (strategy_agent)
-    return strategy_agent.last_message()['content']
+    # 4. Tournament Plays
+    message.append("\n\n🎲 TOURNAMENT OPPORTUNITIES:")
+    for position, plays in analysis['tournament_plays'].items():
+        if plays:
+            for play in plays[:2]:  # Top 2 per position
+                message.append(
+                    f"- {play['player_name']} ({position}): "
+                    f"${play['salary']:,} | {play['projected_points']:.1f} pts"
+                )
 
+    return "\n".join(message)
 
 class LineupOptimizerAgent:
     def __init__(self, name, data):
@@ -406,11 +536,11 @@ def process_user_input_and_strategies(user_proxy, user_input_agent, user_input):
         return constraints
 
 # Function to display lineup
-def display_lineup(lineup):
-    # Define the desired order of positions
+def display_lineup(lineup, constraints, strategy_insights=""):
+    """Display lineup with applied strategy insights"""
+    # Keep existing lineup display code
     position_order = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DST']
     
-    # Build the DataFrame with positions in the specified order
     lineup_data = []
     total_salary = 0
     total_projected_points = 0
@@ -438,13 +568,16 @@ def display_lineup(lineup):
             })
     
     df = pd.DataFrame(lineup_data)
-    
-    # Display the lineup table
     st.table(df)
-    
-    # Display total salary and projected points
     st.write(f"**Total Salary:** ${total_salary}")
     st.write(f"**Total Projected Points:** {total_projected_points:.2f}")
+
+    # Add strategy insights if available
+    if strategy_insights:
+        applied_strategies = explain_lineup_with_architect(lineup, constraints, strategy_insights)
+        if applied_strategies:
+            st.markdown("**Applied Strategies:**")
+            st.markdown(applied_strategies)
 
 def display_player_exposure(optimizer_agent):
     st.subheader('Player Exposure')
@@ -462,23 +595,18 @@ def display_player_exposure(optimizer_agent):
     exposure_df = exposure_df.sort_values(by='Exposure (%)', ascending=False)
     st.table(exposure_df)
 
-# Create UI using Streamlit
 def create_fantasy_football_ui():
     st.title('Daily Fantasy Football Lineup Generator')
     
     # Strategy Suggestions Section
-    with st.expander("View Strategy Suggestions (Optional)", expanded=False):
-        st.subheader("Strategy Suggestions")
-        st.write("Click the button below to generate strategy suggestions based on the current data.")
-        generate_strategies_button = st.button("Generate Strategy Suggestions")
-        
-        if generate_strategies_button:
+    with st.expander("View Strategy Suggestions", expanded=False):
+        st.subheader("Strategy Analysis")
+        strategy_insights = None
+        if st.button("Generate Strategy Suggestions"):
             with st.spinner("Generating strategy suggestions..."):
-                strategies_text = suggest_strategies_with_agent(data)
-            # Use markdown to render nicely formatted text
-            st.markdown(strategies_text)
-        else:
-            st.markdown("_No strategy suggestions generated yet. Click the button above._")
+                strategy_insights = suggest_strategies_with_agent(data)
+                st.session_state.strategy_insights = strategy_insights
+                st.markdown(strategy_insights)
 
     # Undervalued players section
     with st.expander("View Most Undervalued Players", expanded=False):
@@ -493,17 +621,29 @@ def create_fantasy_football_ui():
             }))
             st.write("---")
     
+    # User Input Section
     user_input = st.text_area('Enter your lineup requests:', '', height=75)
-    num_lineups = st.number_input('Number of Lineups', min_value=1, max_value=150, value=1)
-    max_exposure = st.slider('Maximum Player Exposure (%)', min_value=0, max_value=100, value=30)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        num_lineups = st.number_input('Number of Lineups', min_value=1, max_value=150, value=1)
+    with col2:
+        max_exposure = st.slider('Maximum Player Exposure (%)', min_value=0, max_value=100, value=30)
 
     generate_button = st.button('Generate Lineup(s)')
 
     if generate_button:
+        # Get fresh strategy insights if none exist
+        if not strategy_insights:
+            with st.spinner("Analyzing strategies..."):
+                strategy_insights = suggest_strategies_with_agent(data)
+        
+        # Process constraints
         constraints = process_user_input_and_strategies(user_proxy, user_input_agent, user_input)
         constraints['num_lineups'] = num_lineups
         constraints['max_exposure'] = max_exposure / 100
-
+        
+        # Generate lineups
         lineups = optimizer_agent.generate_lineups(constraints)
 
         if not lineups:
@@ -511,18 +651,59 @@ def create_fantasy_football_ui():
         else:
             for idx, lineup in enumerate(lineups):
                 st.subheader(f'Lineup {idx + 1}')
-                display_lineup(lineup)
-                explanation = explain_lineup_with_agent(lineup, constraints)
-                with st.expander("View Lineup Explanation", expanded=True):
-                    st.markdown(explanation)
+                display_lineup(lineup, constraints, strategy_insights)
 
             display_player_exposure(optimizer_agent)
 
     if st.button('Reset'):
         optimizer_agent.previous_lineups = []
         optimizer_agent.player_usage = {}
+        st.session_state.clear()
         st.experimental_rerun()
-                                                
+
+def explain_lineup_with_architect(lineup: dict, constraints: dict, strategy_insights: str) -> str:
+    """Create concise bullet points of applied strategies"""
+    applied_strategies = []
+    
+    # Track players by team for stack identification
+    team_players = {}
+    for pos, player in lineup.items():
+        if player:
+            team = player['team']
+            team_players.setdefault(team, []).append(player)
+    
+    # Check for recommended stacks
+    if "OPTIMAL STACKING OPPORTUNITIES" in strategy_insights:
+        stack_section = strategy_insights.split("OPTIMAL STACKING OPPORTUNITIES")[1].split("\n\n")[0]
+        for team, players in team_players.items():
+            if len(players) >= 2:
+                if team.upper() in stack_section:
+                    stack_players = [p['player_name'] for p in players]
+                    projected = sum(float(p['projected_points']) for p in players)
+                    applied_strategies.append(
+                        f"• Using recommended {team.upper()} stack: {', '.join(stack_players)} "
+                        f"(Proj: {projected:.1f}pts)"
+                    )
+
+    # Check for value plays
+    if "TOP VALUE PLAYS" in strategy_insights:
+        value_section = strategy_insights.split("TOP VALUE PLAYS")[1].split("\n\n")[0]
+        for pos, player in lineup.items():
+            if player and player['player_name'] in value_section.lower():
+                applied_strategies.append(
+                    f"• Value play: {player['player_name']} "
+                    f"(${player['salary']:,}, Proj: {player['projected_points']:.1f}pts)"
+                )
+
+    # Check for tournament plays
+    if "TOURNAMENT OPPORTUNITIES" in strategy_insights:
+        tourney_section = strategy_insights.split("TOURNAMENT OPPORTUNITIES")[1].split("\n\n")[0]
+        for pos, player in lineup.items():
+            if player and player['player_name'] in tourney_section.lower():
+                applied_strategies.append(f"• Tournament play: {player['player_name']}")
+
+    return "\n".join(applied_strategies) if applied_strategies else ""
+
 # Run the app
 if __name__ == "__main__":
     create_fantasy_football_ui()
