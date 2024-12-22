@@ -252,7 +252,6 @@ class LineupOptimizerAgent:
 
     def optimize_lineup(self, constraints: dict, diversity_constraint: set = None) -> dict:
         """Optimize a single lineup based on constraints."""
-        # Generate multiple scenarios
         scenarios = self.generate_scenarios(num_scenarios=100)
         best_lineup = None
         best_score = -float('inf')
@@ -260,21 +259,18 @@ class LineupOptimizerAgent:
         for scenario_data in scenarios:
             try:
                 prob = pulp.LpProblem("Fantasy Football", pulp.LpMaximize)
-                
-                # Convert data to records for optimization
                 players = scenario_data.to_dict('records')
                 
-                # Create binary variables for each player
+                # Create variables
                 player_vars = pulp.LpVariable.dicts("players", 
                                                 ((p['player_name'], p['player_position_id']) for p in players), 
                                                 cat='Binary')
                 
-                # Create FLEX variables
                 flex_vars = pulp.LpVariable.dicts("flex",
-                                            ((p['player_name'], p['player_position_id']) for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']),
-                                            cat='Binary')
+                                                ((p['player_name'], p['player_position_id']) for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']),
+                                                cat='Binary')
 
-                # Objective: Maximize projected points
+                # Objective function
                 prob += pulp.lpSum([
                     float(p['projected_points']) * (
                         player_vars[p['player_name'], p['player_position_id']] +
@@ -284,24 +280,24 @@ class LineupOptimizerAgent:
                     for p in players
                 ])
 
-                # Position constraints
+                # Base position requirements (not counting FLEX)
                 prob += pulp.lpSum(player_vars[p['player_name'], 'QB'] for p in players if p['player_position_id'] == 'QB') == 1
-                prob += pulp.lpSum(player_vars[p['player_name'], 'DST'] for p in players if p['player_position_id'] == 'DST') == 1
                 prob += pulp.lpSum(player_vars[p['player_name'], 'RB'] for p in players if p['player_position_id'] == 'RB') == 2
                 prob += pulp.lpSum(player_vars[p['player_name'], 'WR'] for p in players if p['player_position_id'] == 'WR') == 3
                 prob += pulp.lpSum(player_vars[p['player_name'], 'TE'] for p in players if p['player_position_id'] == 'TE') == 1
+                prob += pulp.lpSum(player_vars[p['player_name'], 'DST'] for p in players if p['player_position_id'] == 'DST') == 1
 
-                # FLEX position constraint
+                # FLEX position constraints - THIS IS THE KEY PART
                 prob += pulp.lpSum(flex_vars[p['player_name'], p['player_position_id']] 
-                        for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']) == 1
+                                for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']) == 1
 
-                # Prevent duplicate players
+                # Prevent same player in base and flex
                 for player in players:
                     if player['player_position_id'] in ['RB', 'WR', 'TE']:
                         prob += player_vars[player['player_name'], player['player_position_id']] + \
                                 flex_vars[player['player_name'], player['player_position_id']] <= 1
 
-                # Salary cap constraint
+                # Salary cap
                 prob += pulp.lpSum([
                     float(p['salary']) * (
                         player_vars[p['player_name'], p['player_position_id']] +
@@ -311,27 +307,13 @@ class LineupOptimizerAgent:
                     for p in players
                 ]) <= 50000
 
-                # Apply must_include constraints
-                if 'must_include' in constraints:
-                    for player_name in constraints['must_include']:
-                        prob += pulp.lpSum([
-                            player_vars[p['player_name'], p['player_position_id']] + 
-                            (flex_vars.get((p['player_name'], p['player_position_id']), 0) 
-                            if p['player_position_id'] in ['RB', 'WR', 'TE'] else 0)
-                            for p in players if p['player_name'] == player_name
-                        ]) == 1
+                # Add constraint to limit total TEs
+                prob += pulp.lpSum([
+                    player_vars[p['player_name'], 'TE'] + flex_vars.get((p['player_name'], 'TE'), 0)
+                    for p in players if p['player_position_id'] == 'TE'
+                ]) <= 1  # Changed from 2 to 1 to force only one TE
 
-                # Apply avoid_teams constraints
-                if 'avoid_teams' in constraints:
-                    for team in constraints['avoid_teams']:
-                        prob += pulp.lpSum([
-                            player_vars[p['player_name'], p['player_position_id']] +
-                            (flex_vars.get((p['player_name'], p['player_position_id']), 0) 
-                            if p['player_position_id'] in ['RB', 'WR', 'TE'] else 0)
-                            for p in players if p['team'].lower() == team.lower()
-                        ]) == 0
-
-                # Solve the problem
+                # Solve and process results
                 prob.solve(pulp.PULP_CBC_CMD(msg=False))
 
                 if pulp.LpStatus[prob.status] == 'Optimal':
