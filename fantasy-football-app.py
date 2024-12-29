@@ -151,12 +151,16 @@ def analyze_data_for_strategy(data: pd.DataFrame) -> dict:
     return analysis
 
 def suggest_strategies_with_agent(data):
-    """Generate strategy suggestions using the enhanced analysis."""
+    """
+    Generate strategy suggestions using the enhanced analysis,
+    incorporating advanced NFL DFS concepts from OccupyFantasy.com.
+    """
+    # 1. Perform your existing analysis
     analysis = analyze_data_for_strategy(data)
-    
+
     message = []
-    
-    # 1. Value Plays
+
+    # 1. Value Plays (No change to the structure, just your existing approach)
     message.append("🎯 TOP VALUE PLAYS BY POSITION:")
     for position, plays in analysis['value_plays'].items():
         if not plays.empty:
@@ -169,17 +173,28 @@ def suggest_strategies_with_agent(data):
                     f"Z-score: {play['points_zscore']:.2f}"
                 )
 
-    # 2. Stacking Opportunities
+    # 2. Stacking Opportunities (Add mention of potential secondary correlations)
     message.append("\n\n🔄 OPTIMAL STACKING OPPORTUNITIES:")
+    message.append("Stacks are crucial for maximizing upside, per OccupyFantasy strategies.")
     for stack in analysis['stacks'][:5]:
         message.append(
-            f"- Stack: {stack['qb']} + {stack['receiver']}\n"
+            f"- Primary Stack: {stack['qb']} + {stack['receiver']}\n"
             f"  Combined Salary: ${stack['total_salary']:,} | "
             f"Projected: {stack['total_projection']:.1f} pts\n"
             f"  Stack Value: {stack['stack_value']:.3f} pts/$K"
         )
 
-    # 3. Market Inefficiencies
+    # Potential note on secondary stacks (RB/WR from opposite teams with high total)
+    message.append("\nConsider adding a 'bring-back' or secondary stack for high-total games:")
+    if 'secondary_stacks' in analysis:
+        for s_stack in analysis['secondary_stacks'][:3]:
+            message.append(
+                f"- Secondary Stack: {s_stack['player1']} + {s_stack['opponent_player']}\n"
+                f"  Combined Salary: ${s_stack['total_salary']:,} | "
+                f"Projected: {s_stack['total_projection']:.1f} pts"
+            )
+
+    # 3. Market Inefficiencies (No change, but keep it aligned with advanced approach)
     message.append("\n\n💰 MARKET INEFFICIENCIES:")
     for position, players in analysis['inefficiencies'].items():
         if not players.empty:
@@ -192,26 +207,39 @@ def suggest_strategies_with_agent(data):
                     f"  Outperforming salary by {player['points_vs_expected']:.1f} pts"
                 )
 
-    # 4. Tournament Plays
+    # 4. Tournament Plays (Add ownership data emphasis)
     message.append("\n\n🎲 TOURNAMENT OPPORTUNITIES:")
+    message.append("Focus on plays with high ceilings and potentially lower ownership:")
     for position, players in analysis['tournament_plays'].items():
         if not players.empty:
             message.append(f"\n{position} Tournament Plays:")
             for _, player in players.iterrows():
+                # If you track ownership projections, add them here
+                ownership_info = (f" | Ownership: {player['ownership']:.1f}%" 
+                                  if 'ownership' in player else "")
                 message.append(
                     f"- {player['player_name']}: "
                     f"${player['salary']:,} | "
-                    f"Ceiling Score: {player['ceiling_score']:.1f}"
+                    f"Ceiling Score: {player['ceiling_score']:.1f}{ownership_info}"
                 )
 
-    # 5. Lineup Building Strategy
+    # 5. Lineup Building Strategy (Incorporate advanced points from OccupyFantasy)
     message.append("\n\n🎮 LINEUP BUILDING STRATEGY:")
-    message.append("1. Consider using one of the top stacks identified above")
-    message.append("2. Fill remaining spots with value plays from different salary tiers")
-    message.append("3. Target at least 2-3 tournament plays for GPPs")
-    message.append("4. Look for market inefficiencies at FLEX position")
+    message.append("1. Use a core set of players and rotate around top stacks (Ref: OccupyFantasy).")
+    message.append("2. Identify secondary correlations in high total games (e.g., WR + Opposing TE).")
+    message.append("3. Mix in contrarian players with low ownership to offset popular chalk plays.")
+    message.append("4. Stay nimble for late-swap opportunities: pivot if your early players disappoint.")
+    message.append("5. Emphasize players in good game environments (high total, pace, or favorable weather).")
+
+    # Keeping original approach but expanded
+    message.append("\nKey Steps to Implement:")
+    message.append("- Include at least one primary stack (QB + pass catcher), plus a bring-back option.")
+    message.append("- Allocate 1-2 contrarian picks or pivot plays in each lineup to gain leverage.")
+    message.append("- Monitor last-minute injury/role changes to adjust your lineup accordingly.")
+    message.append("- Leverage market inefficiencies to find high upside at lower cost (Ref: OccupyFantasy).")
 
     return "\n".join(message)
+
 
 class LineupOptimizerAgent:
     def __init__(self, name, data):
@@ -229,33 +257,54 @@ class LineupOptimizerAgent:
         # Apply value play boosts
         for position, plays in analysis['value_plays'].items():
             if not plays.empty:
-                # Calculate the mean value score for the position
-                mean_value = plays['value_score'].mean()
+                position_mean = plays['value_score'].mean()
+                position_std = plays['value_score'].std()
+                
                 for _, play in plays.iterrows():
-                    boost = play['value_score'] - mean_value  # Calculate boost relative to position mean
+                    # Calculate z-score based boost
+                    z_score = (play['value_score'] - position_mean) / position_std if position_std > 0 else 0
+                    boost = min(max(z_score * 0.05, 0), 0.15)  # Cap boost at 15%
                     self.strategy_boost[play['player_name']] = boost
-        
-        # Apply tournament play boosts
-        for position, plays in analysis['tournament_plays'].items():
-            if not plays.empty and isinstance(plays, pd.DataFrame):  # Ensure we have a DataFrame
-                for _, play in plays.iterrows():
-                    current_boost = self.strategy_boost.get(play['player_name'], 0)
-                    # Calculate ceiling boost without using mean
-                    ceiling_boost = (play['ceiling_score'] / play['projected_points'] - 1) * 0.5
-                    self.strategy_boost[play['player_name']] = max(current_boost, ceiling_boost)
 
-        # Store preferred stacks
-        self.preferred_stacks = [
-            (stack['qb'], stack['receiver'])
-            for stack in analysis['stacks'][:5]  # Top 5 stacks
-        ] if analysis.get('stacks') else []
+        # Apply stack recommendations
+        if 'stacks' in analysis and analysis['stacks']:
+            top_stacks = sorted(
+                analysis['stacks'], 
+                key=lambda x: x['stack_value'] if 'stack_value' in x else 0, 
+                reverse=True
+            )[:5]
+            
+            for stack in top_stacks:
+                self.preferred_stacks.append({
+                    'qb': stack['qb'],
+                    'receiver': stack['receiver'],
+                    'value': stack.get('stack_value', 0)
+                })
+                
+                # Add correlation boost for stack players
+                stack_boost = min(stack.get('stack_value', 0) * 0.02, 0.1)
+                self.strategy_boost[stack['qb']] = \
+                    max(self.strategy_boost.get(stack['qb'], 0), stack_boost)
+                self.strategy_boost[stack['receiver']] = \
+                    max(self.strategy_boost.get(stack['receiver'], 0), stack_boost)
+
+        # Apply tournament play boosts
+        if 'tournament_plays' in analysis:
+            for position, plays in analysis['tournament_plays'].items():
+                if not plays.empty and isinstance(plays, pd.DataFrame):
+                    for _, play in plays.iterrows():
+                        current_boost = self.strategy_boost.get(play['player_name'], 0)
+                        ceiling_boost = (play['ceiling_score'] / play['projected_points'] - 1) * 0.08
+                        self.strategy_boost[play['player_name']] = max(current_boost, ceiling_boost)
 
     def optimize_lineup(self, constraints: dict, diversity_constraint: set = None) -> dict:
-        """Optimize a single lineup based on constraints."""
+        """Optimize a single lineup with exposure constraints"""
         scenarios = self.generate_scenarios(num_scenarios=100)
         best_lineup = None
         best_score = -float('inf')
-
+        
+        print(f"Optimizing with {len(diversity_constraint or set())} exposure constraints")
+        
         for scenario_data in scenarios:
             try:
                 prob = pulp.LpProblem("Fantasy Football", pulp.LpMaximize)
@@ -267,10 +316,10 @@ class LineupOptimizerAgent:
                                                 cat='Binary')
                 
                 flex_vars = pulp.LpVariable.dicts("flex",
-                                                ((p['player_name'], p['player_position_id']) for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']),
-                                                cat='Binary')
-
-                # Objective function
+                                            ((p['player_name'], p['player_position_id']) for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']),
+                                            cat='Binary')
+                
+                # Objective function: Maximize projected points
                 prob += pulp.lpSum([
                     float(p['projected_points']) * (
                         player_vars[p['player_name'], p['player_position_id']] +
@@ -279,15 +328,26 @@ class LineupOptimizerAgent:
                     )
                     for p in players
                 ])
+                
+                # Add exposure constraints first
+                if diversity_constraint:
+                    for player_name in diversity_constraint:
+                        prob += pulp.lpSum([
+                            player_vars[p['player_name'], p['player_position_id']] +
+                            (flex_vars.get((p['player_name'], p['player_position_id']), 0) 
+                            if p['player_position_id'] in ['RB', 'WR', 'TE'] else 0)
+                            for p in players if p['player_name'] == player_name
+                        ]) == 0
+                        print(f"Added constraint to exclude {player_name}")
 
-                # Base position requirements (not counting FLEX)
+                # Base position requirements
                 prob += pulp.lpSum(player_vars[p['player_name'], 'QB'] for p in players if p['player_position_id'] == 'QB') == 1
                 prob += pulp.lpSum(player_vars[p['player_name'], 'RB'] for p in players if p['player_position_id'] == 'RB') == 2
                 prob += pulp.lpSum(player_vars[p['player_name'], 'WR'] for p in players if p['player_position_id'] == 'WR') == 3
                 prob += pulp.lpSum(player_vars[p['player_name'], 'TE'] for p in players if p['player_position_id'] == 'TE') == 1
                 prob += pulp.lpSum(player_vars[p['player_name'], 'DST'] for p in players if p['player_position_id'] == 'DST') == 1
 
-                # FLEX position constraints - THIS IS THE KEY PART
+                # FLEX position constraint
                 prob += pulp.lpSum(flex_vars[p['player_name'], p['player_position_id']] 
                                 for p in players if p['player_position_id'] in ['RB', 'WR', 'TE']) == 1
 
@@ -307,69 +367,86 @@ class LineupOptimizerAgent:
                     for p in players
                 ]) <= 50000
 
-                # Add constraint to limit total TEs
+                # Limit total TEs
                 prob += pulp.lpSum([
                     player_vars[p['player_name'], 'TE'] + flex_vars.get((p['player_name'], 'TE'), 0)
                     for p in players if p['player_position_id'] == 'TE'
-                ]) <= 1  # Changed from 2 to 1 to force only one TE
+                ]) <= 1
 
-                # Solve and process results
+                # Solve
                 prob.solve(pulp.PULP_CBC_CMD(msg=False))
 
                 if pulp.LpStatus[prob.status] == 'Optimal':
+                    # Create list of selected players with their flex status
                     selected_players = []
-                    for player in players:
-                        base_val = player_vars[player['player_name'], player['player_position_id']].varValue
-                        flex_val = flex_vars.get((player['player_name'], player['player_position_id']), 0)
-                        if isinstance(flex_val, pulp.LpVariable):
-                            flex_val = flex_val.varValue
-                            
-                        if base_val > 0.5 or flex_val > 0.5:
-                            player_copy = player.copy()
-                            player_copy['is_flex'] = (flex_val > 0.5)
-                            selected_players.append(player_copy)
-
-                    lineup = self.build_lineup(selected_players)
-                    if 'error' not in lineup:
-                        score = sum(float(player['projected_points']) for player in lineup.values())
+                    
+                    # Add regular position players
+                    for p in players:
+                        var = player_vars[p['player_name'], p['player_position_id']]
+                        if pulp.value(var) > 0.5:  # Using pulp.value() instead of .value()
+                            selected_players.append({**p, 'is_flex': False})
+                    
+                    # Add flex position player
+                    for p in players:
+                        if p['player_position_id'] in ['RB', 'WR', 'TE']:
+                            var = flex_vars[p['player_name'], p['player_position_id']]
+                            if pulp.value(var) > 0.5:  # Using pulp.value() instead of .value()
+                                selected_players.append({**p, 'is_flex': True})
+                    
+                    current_lineup = self.build_lineup(selected_players)
+                    
+                    if 'error' not in current_lineup:
+                        score = sum(float(p['projected_points']) for p in current_lineup.values())
                         if score > best_score:
                             best_score = score
-                            best_lineup = lineup
-
+                            best_lineup = current_lineup
+                            print(f"Found new best lineup with score {score}")
+            
             except Exception as e:
                 print(f"Error in optimization: {str(e)}")
                 continue
-
+        
         return best_lineup if best_lineup else {'error': "No optimal solution found"}
 
     def generate_scenarios(self, num_scenarios=100):
-        """Generate multiple scenarios with proper DataFrame operations."""
+        """Generate multiple scenarios with strategy boosts applied."""
         scenarios = []
         for _ in range(num_scenarios):
             try:
                 scenario = self.data.copy()
                 
-                # Add random noise to projected points
+                # Base noise
                 noise = np.random.normal(1, 0.1, size=len(scenario))
                 
-                # Apply position-specific adjustments
+                # Position-specific adjustments
                 position_multipliers = scenario['player_position_id'].map({
-                    'TE': 0.95,
-                    'RB': 1.02,
-                    'WR': 1.02,
-                    'QB': 1.0,
-                    'DST': 1.0
+                    'TE': 0.95,  # Slightly reduce TE projections
+                    'RB': 1.02,  # Boost RB slightly
+                    'WR': 1.02,  # Boost WR slightly
+                    'QB': 1.0,   # Keep QB neutral
+                    'DST': 1.0   # Keep DST neutral
                 }).fillna(1.0)
                 
                 # Apply strategy boosts
-                strategy_boosts = pd.Series(
-                    [self.strategy_boost.get(name, 0) for name in scenario['player_name']],
+                strategy_multipliers = pd.Series(
+                    [1 + self.strategy_boost.get(name, 0) 
+                     for name in scenario['player_name']],
                     index=scenario.index
                 )
                 
+                # Stack correlation adjustments
+                stack_multipliers = pd.Series(1.0, index=scenario.index)
+                for stack in self.preferred_stacks:
+                    qb_idx = scenario['player_name'] == stack['qb']
+                    receiver_idx = scenario['player_name'] == stack['receiver']
+                    if qb_idx.any() and receiver_idx.any():
+                        correlation = np.random.normal(1.1, 0.05)  # Positive correlation
+                        stack_multipliers.loc[qb_idx | receiver_idx] *= correlation
+                
                 # Combine all adjustments
-                total_multiplier = noise * position_multipliers * (1 + strategy_boosts)
-                scenario['projected_points'] = scenario['projected_points'] * total_multiplier
+                total_multiplier = (noise * position_multipliers * 
+                                  strategy_multipliers * stack_multipliers)
+                scenario['projected_points'] *= total_multiplier
                 
                 scenarios.append(scenario)
                 
@@ -423,37 +500,59 @@ class LineupOptimizerAgent:
         return lineup
 
     def generate_lineups(self, constraints: dict) -> list:
-        """Generate multiple lineups with strategy consideration"""
+        """Generate multiple lineups with proper exposure control"""
         num_lineups = int(constraints.get('num_lineups', 1))
-        max_exposure = float(constraints.get('max_exposure', 0.3))
+        max_exposure = float(constraints.get('max_exposure', 0.3))  # Default 30%
         lineups = []
         
-        # Add diversity constraints for each iteration
-        used_players = set()
+        # Reset tracking for new batch of lineups
+        self.player_usage = {}
+        self.previous_lineups = []
+        
+        print(f"Generating {num_lineups} lineups with max exposure {max_exposure}")
         
         for i in range(num_lineups):
-            # Generate lineup with diversity constraint
-            lineup = self.optimize_lineup(constraints, diversity_constraint=used_players)
+            print(f"\nGenerating lineup {i+1}/{num_lineups}")
             
-            if 'error' not in lineup:
-                lineups.append(lineup)
-                
-                # Update player usage and used_players set
-                for player in lineup.values():
-                    if player:
-                        player_name = player['player_name']
-                        self.player_usage[player_name] = self.player_usage.get(player_name, 0) + 1
-                        used_players.add(player_name)
-                
-                # Apply exposure limits for next iteration
-                if i < num_lineups - 1:
-                    for player_name, count in self.player_usage.items():
-                        if count / (i + 1) > max_exposure:
-                            if 'avoid_players' not in constraints:
-                                constraints['avoid_players'] = []
-                            if player_name not in constraints.get('must_include', []):
-                                constraints['avoid_players'].append(player_name)
-
+            # Calculate current exposure limits
+            exposure_constraints = set()
+            if i > 0:  # Skip first lineup
+                for player_name, count in self.player_usage.items():
+                    current_exposure = count / (i + 1)
+                    projected_exposure = (count + 1) / (i + 2)  # Check if adding one more would exceed
+                    print(f"Player {player_name}: Current {current_exposure:.2f}, Projected {projected_exposure:.2f}")
+                    
+                    if projected_exposure > max_exposure:
+                        exposure_constraints.add(player_name)
+                        print(f"Adding exposure constraint for {player_name}")
+            
+            # Generate lineup with exposure constraints
+            lineup = self.optimize_lineup(
+                constraints=constraints,
+                diversity_constraint=exposure_constraints
+            )
+            
+            if 'error' in lineup:
+                print(f"Failed to generate valid lineup with constraints")
+                continue
+            
+            # Update tracking
+            lineups.append(lineup)
+            self.previous_lineups.append(lineup)
+            
+            # Update usage counts
+            for pos, player in lineup.items():
+                if player:
+                    player_name = player['player_name']
+                    self.player_usage[player_name] = self.player_usage.get(player_name, 0) + 1
+                    print(f"Updated usage for {player_name}: {self.player_usage[player_name]}")
+        
+        # Final exposure check
+        print("\nFinal exposure rates:")
+        for player_name, count in self.player_usage.items():
+            final_exposure = count / len(lineups) if lineups else 0
+            print(f"{player_name}: {final_exposure:.2f}")
+        
         return lineups
     
     def get_average_projected_points(self, player_name):
@@ -488,7 +587,7 @@ def process_user_input_and_strategies(user_proxy, user_input_agent, user_input):
     return constraints
 
 def display_lineup(lineup, constraints, strategy_insights=""):
-    """Display lineup with applied strategy insights"""
+    """Display lineup with improved formatting"""
     position_order = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DST']
     
     lineup_data = []
@@ -502,10 +601,10 @@ def display_lineup(lineup, constraints, strategy_insights=""):
             projected_points = float(player['projected_points'])
             lineup_data.append({
                 'Position': position,
-                'Player': player['player_name'],
-                'Team': player['team'].upper(),
-                'Projected Points': f"{projected_points:.1f}",
-                'Salary': f"${salary:,.0f}"
+                'Player': player['player_name'].upper(),  # Uppercase player names
+                'Team': player['team'].upper(),          # Uppercase team names
+                'Projected': f"{projected_points:.1f}",  # Only 1 decimal place
+                'Salary': f"${salary:,.0f}"             # Comma-separated whole dollars
             })
             total_salary += salary
             total_projected_points += projected_points
@@ -514,21 +613,27 @@ def display_lineup(lineup, constraints, strategy_insights=""):
                 'Position': position,
                 'Player': '',
                 'Team': '',
-                'Projected Points': '',
+                'Projected': '',
                 'Salary': ''
             })
     
+    # Create DataFrame and display
     df = pd.DataFrame(lineup_data)
-    st.table(df)
-    st.write(f"**Total Salary:** ${total_salary:,.0f}")
-    st.write(f"**Total Projected Points:** {total_projected_points:.2f}")
+    st.table(df)  # Using st.table() for better default formatting
+    
+    # Display totals in columns
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Total Salary", f"${total_salary:,.0f}")
+    with col2:
+        st.metric("Projected Points", f"{total_projected_points:.1f}")
 
-    # Add strategy insights if available
+    # If we have strategy insights, display them in an expander
     if strategy_insights:
-        applied_strategies = explain_lineup_with_architect(lineup, constraints, strategy_insights)
-        if applied_strategies:
-            st.markdown("**Applied Strategies:**")
-            st.markdown(applied_strategies)
+        with st.expander("View Applied Strategies", expanded=True):
+            applied_strategies = explain_lineup_with_architect(lineup, constraints, strategy_insights)
+            if applied_strategies:
+                st.markdown(applied_strategies)
 
 def display_player_exposure(optimizer_agent):
     """Display player exposure statistics"""
@@ -600,18 +705,21 @@ def create_fantasy_football_ui():
         max_exposure = st.slider('Maximum Player Exposure (%)', min_value=0, max_value=100, value=30)
 
     if st.button('Generate Lineup(s)'):
-        # Get fresh strategy insights if none exist
-        if not hasattr(st.session_state, 'strategy_insights'):
-            with st.spinner("Analyzing strategies..."):
-                strategy_insights = suggest_strategies_with_agent(data)
-                st.session_state.strategy_insights = strategy_insights
+        # Get fresh strategy insights and analysis
+        with st.spinner("Analyzing strategies..."):
+            analysis = analyze_data_for_strategy(data)
+            strategy_insights = suggest_strategies_with_agent(data)
+            st.session_state.strategy_insights = strategy_insights
+            
+            # Apply strategy analysis to optimizer
+            optimizer_agent.apply_strategy_adjustments(analysis)
         
         # Process constraints
         constraints = process_user_input_and_strategies(user_proxy, user_input_agent, user_input)
         constraints['num_lineups'] = num_lineups
         constraints['max_exposure'] = max_exposure / 100
         
-        # Generate lineups
+        # Generate lineups with applied strategies
         with st.spinner("Generating optimized lineups..."):
             lineups = optimizer_agent.generate_lineups(constraints)
 
@@ -620,7 +728,11 @@ def create_fantasy_football_ui():
         else:
             for idx, lineup in enumerate(lineups):
                 st.subheader(f'Lineup {idx + 1}')
-                display_lineup(lineup, constraints, st.session_state.strategy_insights)
+                display_lineup(
+                    lineup=lineup, 
+                    constraints=constraints, 
+                    strategy_insights=st.session_state.strategy_insights
+                )
 
             display_player_exposure(optimizer_agent)
 
@@ -631,8 +743,8 @@ def create_fantasy_football_ui():
         st.experimental_rerun()
 
 def explain_lineup_with_architect(lineup: dict, constraints: dict, strategy_insights: str) -> str:
-    """Create concise bullet points of applied strategies"""
-    applied_strategies = []
+    """Create focused strategy insights for the lineup"""
+    insights = []
     
     # Track players by team for stack identification
     team_players = {}
@@ -641,50 +753,33 @@ def explain_lineup_with_architect(lineup: dict, constraints: dict, strategy_insi
             team = player['team']
             team_players.setdefault(team, []).append(player)
     
-    # 1. Analyze Stacks
-    for team, players in team_players.items():
-        if len(players) >= 2:
-            qb_player = next((p for p in players if p['player_position_id'] == 'QB'), None)
-            receivers = [p for p in players if p['player_position_id'] in ['WR', 'TE']]
-            
-            if qb_player and receivers:
-                stack_value = qb_player['projected_points'] + sum(r['projected_points'] for r in receivers)
-                stack_salary = qb_player['salary'] + sum(r['salary'] for r in receivers)
-                
-                applied_strategies.append(
-                    f"• {team.upper()} Stack:\n"
-                    f"  QB: {qb_player['player_name']} + {', '.join(r['player_name'] for r in receivers)}\n"
-                    f"  Combined Proj: {stack_value:.1f} pts | Cost: ${stack_salary:,}"
-                )
+    # Find QB team and its stack potential
+    qb_team = next((player['team'] for pos, player in lineup.items() 
+                   if pos == 'QB'), None)
     
-    # 2. Identify Value Plays
-    for pos, player in lineup.items():
-        if player:
-            value_score = float(player['projected_points']) / float(player['salary']) * 1000
-            if value_score > 2.0:  # More than 2 points per $1000
-                applied_strategies.append(
-                    f"• Value Play: {player['player_name']} ({pos})\n"
-                    f"  {player['projected_points']:.1f} pts / ${player['salary']:,}\n"
-                    f"  ({value_score:.2f} pts/$1K)"
-                )
-    
-    # 3. Check for Correlation with Game Stacks
-    team_counts = {}
-    for pos, player in lineup.items():
-        if player:
-            team_counts[player['team']] = team_counts.get(player['team'], 0) + 1
-    
-    for team, count in team_counts.items():
-        if count >= 3:
-            players = [p for pos, p in lineup.items() if p and p['team'] == team]
-            total_proj = sum(float(p['projected_points']) for p in players)
-            applied_strategies.append(
-                f"• Heavy {team.upper()} Exposure:\n"
-                f"  {', '.join(p['player_name'] for p in players)}\n"
-                f"  Combined Projection: {total_proj:.1f} pts"
+    if qb_team and qb_team in team_players:
+        qb_player = next((p for p in team_players[qb_team] if p['player_position_id'] == 'QB'), None)
+        receivers = [p for p in team_players[qb_team] if p['player_position_id'] in ['WR', 'TE']]
+        
+        if qb_player and receivers:
+            receiver_names = ', '.join(r['player_name'] for r in receivers)
+            total_salary = qb_player['salary'] + sum(r['salary'] for r in receivers)
+            insights.append(
+                f"• {qb_team.upper()} Stack: {qb_player['player_name']} + {receiver_names}\n"
+                f"  Stack Cost: ${total_salary:,}"
             )
+            
+            # Only look for bring-back stacks from the QB's game
+            for team, players in team_players.items():
+                if team != qb_team and len(players) >= 1:
+                    pass_catchers = [p for p in players if p['player_position_id'] in ['WR', 'TE', 'RB']]
+                    if pass_catchers:
+                        insights.append(
+                            f"• Game Stack Bring-Back: {team.upper()}\n"
+                            f"  Players: {', '.join(p['player_name'] for p in pass_catchers)}"
+                        )
 
-    return "\n".join(applied_strategies) if applied_strategies else ""
+    return "\n\n".join(insights) if insights else ""
 
 # Initialize AutoGen agents
 config_list = [
