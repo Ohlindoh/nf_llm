@@ -11,7 +11,7 @@ import logging
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
-from collectors.utils import clean_player_name, get_current_nfl_week
+from nf_llm.collectors.utils import clean_player_name, get_current_nfl_week
 
 POSITIONS = ['QB', 'RB', 'WR', 'TE', 'DST']
 BASE_URL = 'https://www.fantasypros.com/nfl/stats/{}.php?range=week&week={}'

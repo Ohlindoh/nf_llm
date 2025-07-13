@@ -14,3 +14,4 @@ RUN pip install jupyter
 # Copy the requirements.txt and install dependencies.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# export PYTHONPATH=src

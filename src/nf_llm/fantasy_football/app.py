@@ -27,12 +27,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-from config import Config
-from data import FantasyDataManager
-from optimizer import LineupOptimizer
-from analysis import FantasyAnalyzer
-from agents import FantasyAgentSystem
-from display import FantasyDisplayManager
+from nf_llm.fantasy_football.config import Config
+from nf_llm.fantasy_football.data import FantasyDataManager
+from nf_llm.fantasy_football.optimizer import LineupOptimizer
+from nf_llm.fantasy_football.analysis import FantasyAnalyzer
+from nf_llm.fantasy_football.agents import FantasyAgentSystem
+from nf_llm.fantasy_football.display import FantasyDisplayManager
 
 class FantasyFootballApp:
     """Main application class."""

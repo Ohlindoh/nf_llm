@@ -6,7 +6,7 @@ import logging
 from typing import Optional, Dict, List
 import os
 
-from collectors.utils import clean_player_name, clean_dst_name
+from nf_llm.collectors.utils import clean_player_name, clean_dst_name
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
