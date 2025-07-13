@@ -1,0 +1,5 @@
+# Placeholder CI workflow
+# TODO: use `make install` for dependency setup
+# Example:
+# steps:
+#   - run: make install
