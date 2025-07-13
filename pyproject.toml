@@ -1,0 +1,21 @@
+[project]
+name = "nf-llm"
+version = "0.1.0"
+description = "LLM-powered DFS lineup optimiser"
+requires-python = ">=3.11"
+
+dependencies = [
+  "pandas",
+  "duckdb",
+  "pulp",
+  "streamlit",
+  "tenacity",
+  "openai",
+  "typer",
+  "pydantic",
+  "autogen",
+  "ruff",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "black", "ruff", "mypy", "pre-commit"]
