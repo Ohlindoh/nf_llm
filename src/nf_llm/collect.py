@@ -15,10 +15,10 @@ collectors_dir = os.path.join(current_dir, 'collectors')
 sys.path.append(collectors_dir)
 
 # Import data collection functions
-from fantasy_pros_projections import collect_and_clean_fantasy_pros_data
-from dk import collect_draftkings_data
-from collectors.fantasy_pros_stats import collect_fantasy_pros_stats
-from collectors.utils import clean_player_name
+from nf_llm.collectors.fantasy_pros_projections import collect_and_clean_fantasy_pros_data
+from nf_llm.collectors.dk import collect_draftkings_data
+from nf_llm.collectors.fantasy_pros_stats import collect_fantasy_pros_stats
+from nf_llm.collectors.utils import clean_player_name
 
 
 OUTPUT_DIR = 'data'
