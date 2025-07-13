@@ -1,4 +1,3 @@
-import requests
 import logging
 import datetime
 import re
@@ -24,6 +23,8 @@ TEAM_NAME_MAPPING = {
 
 def get_current_nfl_week():
     """Fetch the current NFL week number from ESPN API based on the current date."""
+    import requests
+
     response = requests.get(ESPN_API_URL)
     if response.status_code == 200:
         data = response.json()
@@ -41,6 +42,8 @@ def get_current_nfl_week():
 def get_draftkings_contest_names():
     """Fetch the contest names from DraftKings NFL contests where gameType is 'Classic'."""
     try:
+        import requests
+
         response = requests.get(DRAFTKINGS_API_URL)
         if response.status_code == 200:
             data = response.json()
@@ -71,7 +74,7 @@ def clean_dst_name(name: str) -> str:
     """
     Clean DST name for consistent matching across all modules.
     """
-    cleaned_name = re.sub(r'[^a-z]', '', name.strip().lower())
+    cleaned_name = re.sub(r'[^a-z0-9]', '', name.strip().lower())
     for full_name, short_name in TEAM_NAME_MAPPING.items():
         if full_name in cleaned_name:
             return f"{short_name.lower()}"
