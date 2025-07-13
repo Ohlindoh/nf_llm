@@ -11,3 +11,4 @@ numpy
 lxml
 ipywidgets
 streamlit
+requests
