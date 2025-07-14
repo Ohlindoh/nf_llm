@@ -8,7 +8,7 @@ _CONN: duckdb.DuckDBPyConnection | None = None
 
 
 def _get_db_path() -> Path:
-    base_dir = Path(__file__).resolve().parents[2]
+    base_dir = Path(__file__).resolve().parents[1]
     data_dir = base_dir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
     return data_dir / "nf_llm.db"
@@ -19,7 +19,12 @@ def get_conn() -> duckdb.DuckDBPyConnection:
     global _CONN
     if _CONN is None:
         db_path = _get_db_path()
-        _CONN = duckdb.connect(str(db_path))
+        try:
+            _CONN = duckdb.connect(str(db_path))
+            # Add WAL mode to avoid multi-process locks
+            _CONN.execute("PRAGMA journal_mode=wal")
+        except Exception as e:
+            raise RuntimeError(f"Failed to connect to database at {db_path}: {e}") from e
     return _CONN
 
 

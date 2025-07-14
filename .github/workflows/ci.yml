@@ -18,6 +18,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
       - name: Cache UV directories
         uses: actions/cache@v3
         with:
@@ -27,12 +28,13 @@ jobs:
             ${{ runner.os }}-uv-
       - name: Install dependencies
         run: make install
-      - name: Ruff
-        run: ruff check .
-      - name: Black
-        run: black --check .
+      - name: Lint and Format Check
+        run: |
+          ruff check .
+          ruff format --check .
+          black --check .
       - name: Pytest
-        run: pytest -q --cov=src/nf_llm --cov-report=xml
+        run: pytest -q --cov=src/nf_llm --cov-report=xml || exit 1
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
