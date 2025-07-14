@@ -1,6 +1,41 @@
+[project]
+name = "nf_llm"
+version = "0.1.0"
+description = "NF LLM Project"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "bs4",
+    "openai",
+    "langchain",
+    "Flask",
+    "pulp",
+    "transformers",
+    "pyautogen",
+    "scikit-learn",
+    "numpy",
+    "lxml",
+    "ipywidgets",
+    "streamlit",
+    "requests",
+    "typer",
+    "duckdb",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "ruff",
+    "pytest",
+    "pytest-cov",
+]
+
 [tool.black]
 line-length = 88
 extend-exclude = "src/"
 
 [tool.ruff.lint]
 select = []
+
+[tool.poetry.scripts]
+nf-llm = "nf_llm.cli:app"

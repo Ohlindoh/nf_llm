@@ -1,3 +1,2 @@
 install:
-	pip install -r .devcontainer/requirements.txt
-	pip install black ruff pytest pytest-cov
+	uv sync --frozen || (uv pip compile pyproject.toml -o uv.lock && uv sync)
