@@ -11,7 +11,7 @@ dependencies = [
     "Flask",
     "pulp",
     "transformers",
-    "pyautogen",
+    "ag2",
     "scikit-learn",
     "numpy",
     "lxml",
