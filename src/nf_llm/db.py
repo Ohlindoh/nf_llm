@@ -14,6 +14,11 @@ def _get_db_path() -> Path:
     return data_dir / "nf_llm.db"
 
 
+def get_db_path() -> Path:
+    """Public helper to return the path to the database file."""
+    return _get_db_path()
+
+
 def get_conn() -> duckdb.DuckDBPyConnection:
     """Return a singleton DuckDB connection."""
     global _CONN

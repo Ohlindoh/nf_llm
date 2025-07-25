@@ -33,7 +33,7 @@ def db_init() -> None:
     # Execute the schema
     try:
         db.exec_sql(schema_sql)
-        typer.echo("Database initialized successfully")
+        typer.echo(f"Database initialized successfully at {db.get_db_path()}")
     except Exception as e:
         typer.echo(f"Error initializing database: {e}")
         raise typer.Exit(code=1)
