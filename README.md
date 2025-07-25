@@ -16,9 +16,11 @@ This project contains utilities for collecting fantasy football data and generat
    ```
 
 3. **Initialize the database**
+   Apply the schema to create `data/nf_llm.db`:
    ```bash
-   nf-llm db init
+   PYTHONPATH=src python -m nf_llm.cli db init
    ```
+   (If you install the package, you can use `nf-llm db init` instead.)
 
 4. **Collect data**
    ```bash
