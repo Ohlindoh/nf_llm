@@ -6,6 +6,11 @@ import json
 import streamlit as st
 import autogen
 from autogen import AssistantAgent, UserProxyAgent
+import os, pathlib
+
+_secret_path = pathlib.Path("/run/secrets/openai_api_key")
+if not os.getenv("OPENAI_API_KEY") and _secret_path.exists():
+    os.environ["OPENAI_API_KEY"] = _secret_path.read_text().strip()
 
 # Initialize LLM configuration
 llm_config = {

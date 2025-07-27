@@ -1,0 +1,16 @@
+version: "3.9"
+
+secrets:
+  openai_api_key:                   # <-- global definition
+    file: ../nf_secrets/openai_api_key.txt
+
+services:
+  ui:
+    build: .
+    container_name: nf_ui
+    ports:
+      - "8501:8501"
+    secrets:
+      - openai_api_key              # <-- mounts at /run/secrets/openai_api_key
+    volumes:
+      - ./data:/app/data
