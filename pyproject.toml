@@ -19,8 +19,8 @@ dependencies = [
     "streamlit",
     "requests",
     "typer",
-    "duckdb",
     "psycopg[c]",
+    "sqlalchemy",
 ]
 
 [project.optional-dependencies]

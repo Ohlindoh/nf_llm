@@ -2,8 +2,8 @@ import os, pathlib
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-DEFAULT_SQLITE = "sqlite:///data/nf_llm.db"
-url = os.getenv("DATABASE_URL", DEFAULT_SQLITE)
+# PostgreSQL is the only supported database now
+url = os.getenv("DATABASE_URL", "postgresql+psycopg://nf_user@localhost:5432/nf_llm")
 
 # If running in Docker with a secrets-mounted Postgres password, inject it
 _pw_file = pathlib.Path("/run/secrets/db_password")
