@@ -20,7 +20,7 @@ dependencies = [
     "requests",
     "typer",
     "duckdb",
-    "psycopg[binary]==3.1",
+    "psycopg[c]",
 ]
 
 [project.optional-dependencies]

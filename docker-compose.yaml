@@ -3,14 +3,41 @@ version: "3.9"
 secrets:
   openai_api_key:                   # <-- global definition
     file: ../nf_secrets/openai_api_key.txt
+  db_password:
+    file: ../nf_secrets/db_password.txt
 
 services:
-  ui:
+  db:
+    image: postgres:16-alpine
+    container_name: nf_db
+    environment:
+      POSTGRES_USER: nf_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB: nf_llm
+    secrets:
+      - db_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nf_user"]
+      interval: 5s
+      retries: 5
+ui:
     build: .
     container_name: nf_ui
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8501:8501"
     secrets:
-      - openai_api_key              # <-- mounts at /run/secrets/openai_api_key
+      - openai_api_key
+      - db_password
+    environment:
+      DATABASE_URL: postgresql+psycopg://nf_user@db:5432/nf_llm
     volumes:
+      # keep collectors’ CSVs, but we’ll drop the SQLite file shortly
       - ./data:/app/data
+
+volumes:
+  pgdata:

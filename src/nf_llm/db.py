@@ -1,50 +1,19 @@
-import os
-from pathlib import Path
+import os, pathlib
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
-import duckdb
-import pandas as pd
+DEFAULT_SQLITE = "sqlite:///data/nf_llm.db"
+url = os.getenv("DATABASE_URL", DEFAULT_SQLITE)
 
-_CONN: duckdb.DuckDBPyConnection | None = None
+# If running in Docker with a secrets-mounted Postgres password, inject it
+_pw_file = pathlib.Path("/run/secrets/db_password")
+if "postgresql" in url and _pw_file.exists():
+    pw = _pw_file.read_text().strip()
+    url = url.replace("nf_user@", f"nf_user:{pw}@")
 
+engine = create_engine(url, pool_pre_ping=True, future=True)
+SessionLocal = sessionmaker(bind=engine)
 
-def _get_db_path() -> Path:
-    base_dir = Path(__file__).resolve().parents[1]
-    data_dir = base_dir / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir / "nf_llm.db"
-
-
-def get_db_path() -> Path:
-    """Public helper to return the path to the database file."""
-    return _get_db_path()
-
-
-def get_conn() -> duckdb.DuckDBPyConnection:
-    """Return a singleton DuckDB connection."""
-    global _CONN
-    if _CONN is None:
-        db_path = _get_db_path()
-        try:
-            _CONN = duckdb.connect(str(db_path))
-            # Add WAL mode to avoid multi-process locks
-            _CONN.execute("PRAGMA journal_mode=wal")
-        except Exception as e:
-            raise RuntimeError(f"Failed to connect to database at {db_path}: {e}") from e
-    return _CONN
-
-
-def exec_sql(sql: str, params: tuple | None = None) -> None:
-    """Execute a SQL statement using the global connection."""
-    conn = get_conn()
-    if params is not None:
-        conn.execute(sql, params)
-    else:
-        conn.execute(sql)
-
-
-def insert_dataframe(df: pd.DataFrame, table: str) -> None:
-    """Insert a pandas DataFrame into a table."""
-    conn = get_conn()
-    conn.register("tmp", df)
-    conn.execute(f"INSERT INTO {table} SELECT * FROM tmp")
-    conn.unregister("tmp")
+def init_db():
+    from nf_llm import models  # import your SQLAlchemy Base subclasses
+    models.Base.metadata.create_all(engine)
