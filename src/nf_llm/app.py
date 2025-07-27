@@ -389,6 +389,11 @@ def create_fantasy_football_ui():
         optimizer_agent.player_usage = {}
         st.experimental_rerun()
 
+# Initialize the database
+from nf_llm.db import init_db
+init_db()
+
 # Run the app
 if __name__ == "__main__":
     create_fantasy_football_ui()
+

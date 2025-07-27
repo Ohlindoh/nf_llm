@@ -22,7 +22,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U nf_user"]
       interval: 5s
       retries: 5
-ui:
+  ui:
     build: .
     container_name: nf_ui
     depends_on:
