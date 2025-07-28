@@ -19,7 +19,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nf_user"]
+      test: ["CMD-SHELL", "pg_isready -U nf_user -d nf_llm"]
       interval: 5s
       retries: 5
   api:
@@ -28,6 +28,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    ports:
+      - "8000:8000"   # host:container
     command: >
       uvicorn nf_llm.api.main:app
       --host 0.0.0.0
