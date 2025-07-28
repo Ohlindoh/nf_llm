@@ -22,6 +22,22 @@ services:
       test: ["CMD-SHELL", "pg_isready -U nf_user"]
       interval: 5s
       retries: 5
+  api:
+    build: .
+    container_name: nf_api
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      uvicorn nf_llm.api.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+    environment:
+      DATABASE_URL: postgresql+psycopg://nf_user@db:5432/nf_llm
+    secrets:
+      - db_password
+
   ui:
     build: .
     container_name: nf_ui

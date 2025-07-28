@@ -21,6 +21,8 @@ dependencies = [
     "typer",
     "psycopg[c]",
     "sqlalchemy",
+    "fastapi",
+    "uvicorn[standard]",
 ]
 
 [project.optional-dependencies]
