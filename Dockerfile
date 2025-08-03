@@ -15,5 +15,5 @@ COPY . /app
 RUN uv pip install --system .
 
 EXPOSE 8501
-CMD ["streamlit", "run", "src/nf_llm/app.py", \
+CMD ["streamlit", "run", "src/nf_llm/fantasy_football/app.py", \
      "--server.port=8501", "--server.address=0.0.0.0"]
