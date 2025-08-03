@@ -6,7 +6,6 @@ from typing import Optional, Dict, Any, List
 import os
 import argparse
 
-from nf_llm.collectors.utils import clean_player_name
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -77,7 +76,7 @@ def collect_draftkings_data(contest_type: str, draft_group_id: Optional[int] = N
         processed_data = []
         for player in data['draftables']:
             processed_player = {
-                'player_name': clean_player_name(player['displayName']),
+                'player_name': player['displayName'],
                 'salary': player['salary'],
                 # Include other fields as needed
             }
@@ -139,3 +138,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.contest_type, args.draft_group_id)
+
