@@ -6,8 +6,6 @@ import logging
 from typing import Optional, Dict, List
 import os
 
-from nf_llm.collectors.utils import clean_player_name, clean_dst_name
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -78,9 +76,6 @@ def collect_and_clean_fantasy_pros_data() -> pd.DataFrame:
     
     # Rename 'r2p_pts' to 'projected_points'
     df = df.rename(columns={'r2p_pts': 'projected_points'})
-    
-    # Clean player names
-    df['player_name'] = df.apply(lambda row: clean_dst_name(row['player_name']) if row['player_position_id'] == 'DST' else clean_player_name(row['player_name']), axis=1)
     
     logger.info(f"Total players collected and cleaned: {len(df)}")
     logger.info(f"Columns after cleaning: {df.columns.tolist()}")

@@ -80,25 +80,6 @@ def clean_dst_name(name: str) -> str:
             return f"{short_name.lower()}"
     return f"{cleaned_name}"
 
-# Easy invocation example for testing
-if __name__ == "__main__":
-    # Example: Fetch and print current NFL week
-    current_week = get_current_nfl_week()
-    print(f"Current NFL Week: {current_week}")
-
-    # Example: Fetch and print DraftKings contest names with gameType 'Classic'
-    draftkings_contests = get_draftkings_contest_names()
-    print(f"DraftKings Contests (Classic gameType): {draftkings_contests}")
-# Easy invocation example for testing
-if __name__ == "__main__":
-    # Example: Fetch and print current NFL week
-    current_week = get_current_nfl_week()
-    print(f"Current NFL Week: {current_week}")
-
-    # Example: Fetch and print DraftKings contest names
-    draftkings_contests = get_draftkings_contest_names()
-    print(f"DraftKings Contests: {draftkings_contests}")
-
 # Existing mapping for player positions
 POSITION_COLUMN_MAPPING = {
     'QB': [
