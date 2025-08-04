@@ -34,8 +34,12 @@ def optimise(req: LineupRequest):
         raise HTTPException(status_code=404, detail=str(err))
     except ValueError as err:
         raise HTTPException(status_code=400, detail=str(err))
-    except Exception as err:               # catch‑all to avoid 500 traces leaking
-        raise HTTPException(status_code=500, detail="Internal optimiser error") from err
+    except Exception as err:
+        logging.error("Optimiser crashed:\n%s", traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail="Internal optimiser error"
+        ) from err
 
     return {"lineups": lineups}
 

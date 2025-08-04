@@ -7,7 +7,7 @@ import pathlib
 from sqlalchemy import create_engine, text
 
 # PostgreSQL is the only supported database now
-url = os.getenv("DATABASE_URL", "postgresql+psycopg://nf_user@localhost:5432/nf_llm")
+url = os.getenv("DATABASE_URL", "postgresql+psycopg2://nf_user@localhost:5432/nf_llm")
 
 # If running in Docker with a secrets-mounted Postgres password, inject it
 # Using the same approach as in db.py

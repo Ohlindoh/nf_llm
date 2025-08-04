@@ -7,9 +7,9 @@ Keeps LineupOptimizer details out of the HTTP layer.
 from pathlib import Path
 from typing import Dict, List, Any
 import pandas as pd
+import traceback, logging
 
-from nf_llm.optimizer import LineupOptimizer
-
+from nf_llm.data_io import preprocess_data
 
 def build_lineups(
     csv_path: str,
@@ -36,6 +36,7 @@ def build_lineups(
         raise FileNotFoundError(f"CSV not found: {csv_file}")
 
     df = pd.read_csv(csv_file)
+    df = preprocess_data(df)
 
     # --- 2. Run optimiser ---
     opt = LineupOptimizer(df)

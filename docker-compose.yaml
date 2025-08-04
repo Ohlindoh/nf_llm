@@ -36,7 +36,7 @@ services:
       --port 8000
       --reload
     environment:
-      DATABASE_URL: postgresql+psycopg://nf_user@db:5432/nf_llm
+      DATABASE_URL: postgresql+psycopg2://nf_user@db:5432/nf_llm
     secrets:
       - db_password
 
@@ -52,7 +52,7 @@ services:
       - openai_api_key
       - db_password
     environment:
-      DATABASE_URL: postgresql+psycopg://nf_user@db:5432/nf_llm
+      DATABASE_URL: postgresql+psycopg2://nf_user@db:5432/nf_llm
     volumes:
       # keep collectors’ CSVs, but we’ll drop the SQLite file shortly
       - ./data:/app/data
