@@ -19,17 +19,21 @@ llm_config = {
     "temperature": 0,
 }
 
-# Load data
-data_file = 'data/merged_fantasy_football_data.csv'
-data = pd.read_csv(data_file)
-data = preprocess_data(data)
+# API configuration - use environment variable or default to localhost
+API_ROOT = os.getenv("API_URL", "http://localhost:8000")
 
-def get_undervalued_players(data, top_n=5):
-    undervalued = {}
-    for position in ['QB', 'RB', 'WR', 'TE', 'DST']:
-        position_data = data[data['player_position_id'] == position].sort_values('value', ascending=False)
-        undervalued[position] = position_data.head(top_n)[['player_name', 'team', 'salary', 'projected_points', 'value']]
-    return undervalued
+def get_undervalued_players(top_n=5):
+    payload = {
+        "csv_path": "data/merged_fantasy_football_data.csv",
+        "top_n": top_n
+    }
+    r = httpx.post(f"{API_ROOT}/undervalued-players", json=payload, timeout=60)
+    if r.status_code != 200:
+        st.error(f"API returned {r.status_code}: {r.json()['detail']}")
+        return {}          # caller can handle empty dict gracefully
+
+    return r.json()["players"]  # FastAPI guarantees this key
+
 
 # Initialize agents
 user_proxy = UserProxyAgent(
@@ -66,8 +70,6 @@ user_input_agent = AssistantAgent(
     """
 )
 
-# API configuration - use environment variable or default to localhost
-API_ROOT = os.getenv("API_URL", "http://localhost:8000")
 
 def call_optimiser(csv_path: str, slate_id: str, constraints: dict):
     payload = {
@@ -146,15 +148,26 @@ def create_fantasy_football_ui():
     # Add a collapsible section for undervalued players
     with st.expander("View Most Undervalued Players", expanded=False):
         st.subheader('Most Undervalued Players')
-        undervalued_players = get_undervalued_players(data)
-        for position, players in undervalued_players.items():
-            st.write(f"**{position}**")
-            st.dataframe(players.style.format({
-                'salary': '${:,.0f}',
-                'projected_points': '{:.2f}',
-                'value': '{:.4f}'
-            }))
-            st.write("---")  # Add a separator between positions
+        try:
+            undervalued_players = get_undervalued_players()
+            if undervalued_players:
+                for position, players in undervalued_players.items():
+                    st.write(f"**{position}**")
+                    if players:  # Check if players list is not empty
+                        df = pd.DataFrame(players)
+                        st.dataframe(df.style.format({
+                            'salary': '${:,.0f}',
+                            'projected_points': '{:.2f}',
+                            'value': '{:.4f}'
+                        }))
+                    else:
+                        st.write("No players found for this position")
+                    st.write("---")  # Add a separator between positions
+            else:
+                st.error("Could not load undervalued players data")
+        except Exception as e:
+            st.error(f"Error loading undervalued players: {str(e)}")
+            st.info("Make sure the API service is running on http://localhost:8000")
 
     user_input = st.text_area('Enter your lineup requests:', '', height=75)
     num_lineups = st.number_input('Number of Lineups', min_value=1, max_value=150, value=1)
@@ -169,7 +182,7 @@ def create_fantasy_football_ui():
         constraints['max_exposure'] = max_exposure / 100  # Convert to decimal
 
         lineups = call_optimiser(
-            csv_path=data_file,
+            csv_path='data/merged_fantasy_football_data.csv',
             slate_id="DK‑NFL‑2025‑Week01",
             constraints=constraints,
         )
