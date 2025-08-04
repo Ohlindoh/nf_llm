@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # PostgreSQL is the only supported database now
-url = os.getenv("DATABASE_URL", "postgresql+psycopg://nf_user@localhost:5432/nf_llm")
+url = os.getenv("DATABASE_URL", "postgresql+psycopg2://nf_user@localhost:5432/nf_llm")
 
 # If running in Docker with a secrets-mounted Postgres password, inject it
 _pw_file = pathlib.Path("/run/secrets/db_password")
@@ -17,3 +17,7 @@ SessionLocal = sessionmaker(bind=engine)
 def init_db():
     from nf_llm import models  # import your SQLAlchemy Base subclasses
     models.Base.metadata.create_all(engine)
+
+def get_conn():
+    """Get a raw database connection for testing purposes"""
+    return engine.connect()

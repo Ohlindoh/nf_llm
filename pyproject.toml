@@ -19,10 +19,11 @@ dependencies = [
     "streamlit",
     "requests",
     "typer",
-    "psycopg[c]",
+    "psycopg2-binary",
     "sqlalchemy",
-    "fastapi",
-    "uvicorn[standard]",
+    "fastapi>=0.110,<1.0",
+    "uvicorn[standard]>=0.25,<1.0",
+    "pydantic>=2.6,<3.0",
 ]
 
 [project.optional-dependencies]
@@ -42,3 +43,9 @@ select = []
 
 [tool.poetry.scripts]
 nf-llm = "nf_llm.cli:app"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
