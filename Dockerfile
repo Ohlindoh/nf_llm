@@ -33,8 +33,8 @@ COPY . .
 # Install the project
 RUN uv sync --frozen
 
-# Expose port
-EXPOSE 8501
+# Expose ports (both API and UI)
+EXPOSE 8000 8501
 
-# Use uv to run the application
-CMD ["uv", "run", "streamlit", "run", "src/nf_llm/fantasy_football/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Default command (can be overridden by docker-compose)
+CMD ["uv", "run", "python", "-c", "print('Container ready. Use docker-compose to run specific services.')"]

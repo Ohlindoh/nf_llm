@@ -1,96 +1,51 @@
 # NF LLM
 
-This project contains utilities for collecting fantasy football data and generating optimized lineups using large language models.
+Fantasy football data collection and lineup optimization using LLMs.
 
-## Prerequisites
+## Setup
 
-- Python 3.11+ 
-- [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver
-
-Install uv if you haven't already:
+Install [uv](https://github.com/astral-sh/uv):
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-## Quick Start
-
-1. **Install dependencies**
-   ```bash
-   uv sync
-   ```
-   This creates a virtual environment and installs all dependencies defined in `pyproject.toml`.
-
-2. **Activate the environment** (optional, uv run handles this automatically)
-   ```bash
-   source .venv/bin/activate  # Linux/Mac
-   # or
-   .venv\Scripts\activate     # Windows
-   ```
-
-3. **Run tests**
-   ```bash
-   uv run pytest
-   ```
-
-4. **Initialize the database**
-   Apply the schema to create `data/nf_llm.db`:
-   ```bash
-   uv run python -m nf_llm.cli db init
-   ```
-
-5. **Collect data**
-   ```bash
-   uv run python -m nf_llm.collect --dk_contest_type Main
-   ```
-
-6. **Run the lineup optimizer**
-   ```bash
-   uv run python -m nf_llm.app
-   ```
-   The optimizer expects an environment variable `OPENAI_API_KEY` for LLM access.
-
-## Development
-
-### Adding Dependencies
-
-Add new dependencies to `pyproject.toml`:
+Install dependencies:
 ```bash
-# Add a new dependency
-uv add package-name
-
-# Add a development dependency  
-uv add --dev package-name
-
-# Add with version constraints
-uv add "package-name>=1.0,<2.0"
+uv sync
 ```
 
-### Code Quality
+## Usage
 
-Run linting and formatting:
+**Collect data:**
 ```bash
-# Format code
-uv run black .
-
-# Lint code
-uv run ruff check .
-
-# Type checking
-uv run mypy src/
+uv run python -m nf_llm.collect --dk_contest_type Main
 ```
 
-### Docker Development
-
-Build and run with Docker Compose:
+**Run the app:**
 ```bash
 docker-compose up --build
 ```
 
-This will start:
-- PostgreSQL database on port 5432
-- API server on port 8000  
-- Streamlit UI on port 8501
+Access the UI at http://localhost:8501
 
-## Project Structure
+## Development
 
-For more detailed usage, inspect the source files under `src/nf_llm/`.
+**Run tests:**
+```bash
+uv run pytest
+```
+
+**Code quality:**
+```bash
+uv run black .
+uv run ruff check .
+```
+
+**Add dependencies:**
+```bash
+uv add package-name
+```
+
+## Environment
+
+Set `OPENAI_API_KEY` for LLM features.
