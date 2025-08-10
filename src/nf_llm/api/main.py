@@ -9,12 +9,13 @@ from nf_llm.service import build_lineups
 
 app = FastAPI(title="NF-LLM API", version="0.1.0")
 
+
 class LineupRequest(BaseModel):
     csv_path: str = Field(..., description="Path to player CSV")
     slate_id: str = Field(..., description="Contest or slate identifier")
     constraints: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Optimizer constraints (num_lineups, max_exposure, etc.)"
+        description="Optimizer constraints (num_lineups, max_exposure, etc.)",
     )
 
 
@@ -48,10 +49,7 @@ def optimise(req: LineupRequest):
         raise HTTPException(status_code=400, detail=str(err))
     except Exception as err:
         logging.error("Optimiser crashed:\n%s", traceback.format_exc())
-        raise HTTPException(
-            status_code=500,
-            detail="Internal optimiser error"
-        ) from err
+        raise HTTPException(status_code=500, detail="Internal optimiser error") from err
 
     return {"lineups": lineups}
 
@@ -63,15 +61,17 @@ def get_undervalued_players_endpoint(req: UndervaluedPlayersRequest):
     """
     try:
         from nf_llm.service import get_undervalued_players_data
+
         players = get_undervalued_players_data(req.csv_path, req.top_n)
         return {"players": players}
     except FileNotFoundError as err:
         raise HTTPException(status_code=404, detail=str(err))
     except Exception as err:
-        logging.error("Undervalued players endpoint crashed:\n%s", traceback.format_exc())
+        logging.error(
+            "Undervalued players endpoint crashed:\n%s", traceback.format_exc()
+        )
         raise HTTPException(
-            status_code=500,
-            detail="Internal error getting undervalued players"
+            status_code=500, detail="Internal error getting undervalued players"
         ) from err
 
 

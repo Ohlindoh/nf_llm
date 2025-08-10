@@ -14,9 +14,12 @@ if "postgresql" in url and _pw_file.exists():
 engine = create_engine(url, pool_pre_ping=True, future=True)
 SessionLocal = sessionmaker(bind=engine)
 
+
 def init_db():
     from nf_llm import models  # import your SQLAlchemy Base subclasses
+
     models.Base.metadata.create_all(engine)
+
 
 def get_conn():
     """Get a raw database connection for testing purposes"""

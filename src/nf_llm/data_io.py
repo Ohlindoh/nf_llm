@@ -1,9 +1,13 @@
 import pandas as pd
 
 REQUIRED_COLS = {
-    "player_name", "player_position_id", "team",
-    "salary", "projected_points"
+    "player_name",
+    "player_position_id",
+    "team",
+    "salary",
+    "projected_points",
 }
+
 
 def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -21,17 +25,13 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
     # Clean salary strings like "$4,500"
     if "salary" in df.columns:
-       df["salary"] = (
-           df["salary"].astype(str)
-                        .str.replace(r"[\$,]", "", regex=True)
-                        .astype(float)
-       )
+        df["salary"] = (
+            df["salary"].astype(str).str.replace(r"[\$,]", "", regex=True).astype(float)
+        )
 
     # Ensure numeric projected points
     if "projected_points" in df.columns:
-        df["projected_points"] = pd.to_numeric(
-            df["projected_points"], errors="coerce"
-        )
+        df["projected_points"] = pd.to_numeric(df["projected_points"], errors="coerce")
 
     # Add value metric for the UI
     if "value" not in df.columns and {"projected_points", "salary"} <= set(df.columns):

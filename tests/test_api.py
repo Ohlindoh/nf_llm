@@ -2,15 +2,17 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from nf_llm.api.main import app   # import the FastAPI instance
+from nf_llm.api.main import app  # import the FastAPI instance
 
 client = TestClient(app)
+
 
 def test_optimise_happy_path(tmp_path: Path):
     # --- arrange ---
     # point to a *real* CSV in your repo; here we copy one into tmp_path
     sample_csv = tmp_path / "players.csv"
-    sample_csv.write_text("""player_name,player_position_id,team,salary,projected_points
+    sample_csv.write_text(
+        """player_name,player_position_id,team,salary,projected_points
     C.J. Stroud,QB,HOU,7000,22.4
     Justin Herbert,QB,LAC,7500,23.8
     Bijan Robinson,RB,ATL,7000,20.1
@@ -26,13 +28,14 @@ def test_optimise_happy_path(tmp_path: Path):
     Mark Andrews,TE,BAL,6300,15.0
     Tyler Conklin,TE,NYJ,3300,9.6
     Cardinals,DST,ARI,2500,6.8
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
     payload = {
         "csv_path": str(sample_csv),
         "slate_id": "DK-NFL-2025-Week01",
-        "constraints": {
-            "num_lineups": 1}
+        "constraints": {"num_lineups": 1},
     }
 
     # --- act ---

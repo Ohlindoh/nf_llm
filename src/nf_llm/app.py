@@ -22,24 +22,20 @@ llm_config = {
 # API configuration - use environment variable or default to localhost
 API_ROOT = os.getenv("API_URL", "http://localhost:8000")
 
+
 def get_undervalued_players(top_n=5):
-    payload = {
-        "csv_path": "data/merged_fantasy_football_data.csv",
-        "top_n": top_n
-    }
+    payload = {"csv_path": "data/merged_fantasy_football_data.csv", "top_n": top_n}
     r = httpx.post(f"{API_ROOT}/undervalued-players", json=payload, timeout=60)
     if r.status_code != 200:
         st.error(f"API returned {r.status_code}: {r.json()['detail']}")
-        return {}          # caller can handle empty dict gracefully
+        return {}  # caller can handle empty dict gracefully
 
     return r.json()["players"]  # FastAPI guarantees this key
 
 
 # Initialize agents
 user_proxy = UserProxyAgent(
-    name="UserProxy",
-    human_input_mode="NEVER",
-    max_consecutive_auto_reply=0
+    name="UserProxy", human_input_mode="NEVER", max_consecutive_auto_reply=0
 )
 
 user_input_agent = AssistantAgent(
@@ -67,7 +63,7 @@ user_input_agent = AssistantAgent(
         Output: {"num_lineups": 5}
 
         Provide your output as a valid JSON object.
-    """
+    """,
 )
 
 
@@ -80,7 +76,7 @@ def call_optimiser(csv_path: str, slate_id: str, constraints: dict):
     r = httpx.post(f"{API_ROOT}/optimise", json=payload, timeout=60)
     if r.status_code != 200:
         st.error(f"API returned {r.status_code}: {r.json()['detail']}")
-        return None          # caller can handle None gracefully
+        return None  # caller can handle None gracefully
 
     return r.json()["lineups"]  # FastAPI guarantees this key
 
@@ -92,18 +88,19 @@ def process_user_input_and_strategies(user_proxy, user_input_agent, user_input):
     else:
         user_input_agent.reset()
         user_proxy.send(user_input, user_input_agent, request_reply=True)
-        response = user_input_agent.last_message()['content']
+        response = user_input_agent.last_message()["content"]
         try:
             constraints = json.loads(response)
         except json.JSONDecodeError:
             constraints = {}
         return constraints
 
+
 # Function to display lineup
 def display_lineup(lineup):
     # Define the desired order of positions
-    position_order = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX', 'DST']
-    
+    position_order = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+
     # Build the DataFrame with positions in the specified order
     lineup_data = []
     total_salary = 0
@@ -111,31 +108,35 @@ def display_lineup(lineup):
     for position in position_order:
         player = lineup.get(position)
         if player:
-            salary = player['salary']
-            projected_points = player['projected_points']
-            lineup_data.append({
-                'Position': position,
-                'Player': player['player_name'],
-                'Team': player['team'].upper(),
-                'Projected Points': projected_points,
-                'Salary': f"${salary}"
-            })
+            salary = player["salary"]
+            projected_points = player["projected_points"]
+            lineup_data.append(
+                {
+                    "Position": position,
+                    "Player": player["player_name"],
+                    "Team": player["team"].upper(),
+                    "Projected Points": projected_points,
+                    "Salary": f"${salary}",
+                }
+            )
             total_salary += salary
             total_projected_points += projected_points
         else:
-            lineup_data.append({
-                'Position': position,
-                'Player': '',
-                'Team': '',
-                'Projected Points': '',
-                'Salary': ''
-            })
-    
+            lineup_data.append(
+                {
+                    "Position": position,
+                    "Player": "",
+                    "Team": "",
+                    "Projected Points": "",
+                    "Salary": "",
+                }
+            )
+
     df = pd.DataFrame(lineup_data)
-    
+
     # Display the lineup table
     st.table(df)
-    
+
     # Display total salary and projected points
     st.write(f"**Total Salary:** ${total_salary}")
     st.write(f"**Total Projected Points:** {total_projected_points:.2f}")
@@ -143,11 +144,11 @@ def display_lineup(lineup):
 
 # Create UI using Streamlit
 def create_fantasy_football_ui():
-    st.title('Daily Fantasy Football Lineup Generator')
+    st.title("Daily Fantasy Football Lineup Generator")
 
     # Add a collapsible section for undervalued players
     with st.expander("View Most Undervalued Players", expanded=False):
-        st.subheader('Most Undervalued Players')
+        st.subheader("Most Undervalued Players")
         try:
             undervalued_players = get_undervalued_players()
             if undervalued_players:
@@ -155,11 +156,15 @@ def create_fantasy_football_ui():
                     st.write(f"**{position}**")
                     if players:  # Check if players list is not empty
                         df = pd.DataFrame(players)
-                        st.dataframe(df.style.format({
-                            'salary': '${:,.0f}',
-                            'projected_points': '{:.2f}',
-                            'value': '{:.4f}'
-                        }))
+                        st.dataframe(
+                            df.style.format(
+                                {
+                                    "salary": "${:,.0f}",
+                                    "projected_points": "{:.2f}",
+                                    "value": "{:.4f}",
+                                }
+                            )
+                        )
                     else:
                         st.write("No players found for this position")
                     st.write("---")  # Add a separator between positions
@@ -169,20 +174,26 @@ def create_fantasy_football_ui():
             st.error(f"Error loading undervalued players: {str(e)}")
             st.info("Make sure the API service is running on http://localhost:8000")
 
-    user_input = st.text_area('Enter your lineup requests:', '', height=75)
-    num_lineups = st.number_input('Number of Lineups', min_value=1, max_value=150, value=1)
-    max_exposure = st.slider('Maximum Player Exposure (%)', min_value=0, max_value=100, value=65)
+    user_input = st.text_area("Enter your lineup requests:", "", height=75)
+    num_lineups = st.number_input(
+        "Number of Lineups", min_value=1, max_value=150, value=1
+    )
+    max_exposure = st.slider(
+        "Maximum Player Exposure (%)", min_value=0, max_value=100, value=65
+    )
 
-    generate_button = st.button('Generate Lineup(s)')
+    generate_button = st.button("Generate Lineup(s)")
 
     if generate_button:
         # Process user input and strategies
-        constraints = process_user_input_and_strategies(user_proxy, user_input_agent, user_input)
-        constraints['num_lineups'] = num_lineups
-        constraints['max_exposure'] = max_exposure / 100  # Convert to decimal
+        constraints = process_user_input_and_strategies(
+            user_proxy, user_input_agent, user_input
+        )
+        constraints["num_lineups"] = num_lineups
+        constraints["max_exposure"] = max_exposure / 100  # Convert to decimal
 
         lineups = call_optimiser(
-            csv_path='data/merged_fantasy_football_data.csv',
+            csv_path="data/merged_fantasy_football_data.csv",
             slate_id="DK‑NFL‑2025‑Week01",
             constraints=constraints,
         )
@@ -191,10 +202,10 @@ def create_fantasy_football_ui():
             st.error("No lineups were generated.")
         else:
             for idx, lineup in enumerate(lineups):
-                st.subheader(f'Lineup {idx + 1}')
+                st.subheader(f"Lineup {idx + 1}")
                 display_lineup(lineup)
-            
-    if st.button('Reset'):
+
+    if st.button("Reset"):
         st.experimental_rerun()
 
 

@@ -19,27 +19,34 @@ if "postgresql" in url and _pw_file.exists():
 # Create engine
 engine = create_engine(url, pool_pre_ping=True, future=True)
 
+
 def create_tables():
     """Create all tables defined in models.py"""
     print(f"Creating tables using engine: {engine}")
-    
+
     # Import models the same way init_db does
     from nf_llm import models
+
     print(f"Available models: {dir(models)}")
     print(f"Base metadata tables: {models.Base.metadata.tables.keys()}")
-    
+
     # Create all tables
     models.Base.metadata.create_all(engine)
-    
+
     # Verify tables were created
     with engine.connect() as conn:
-        result = conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public'"))
+        result = conn.execute(
+            text(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+            )
+        )
         tables = [row[0] for row in result]
         print(f"Tables in database: {tables}")
-        
+
         # Check if lineup table exists
-        lineup_exists = 'lineup' in tables
+        lineup_exists = "lineup" in tables
         print(f"Lineup table exists: {lineup_exists}")
+
 
 if __name__ == "__main__":
     create_tables()

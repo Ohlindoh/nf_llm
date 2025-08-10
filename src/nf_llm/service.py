@@ -12,6 +12,7 @@ import traceback, logging
 from nf_llm.data_io import preprocess_data
 from nf_llm.optimizer import LineupOptimizer
 
+
 def build_lineups(
     csv_path: str,
     slate_id: str,
@@ -47,17 +48,19 @@ def build_lineups(
     return lineups
 
 
-def get_undervalued_players_data(csv_path: str, top_n: int = 5) -> Dict[str, List[Dict]]:
+def get_undervalued_players_data(
+    csv_path: str, top_n: int = 5
+) -> Dict[str, List[Dict]]:
     """
     Get most undervalued players by position.
-    
+
     Parameters
     ----------
     csv_path : str
         Path to the player CSV file
     top_n : int
         Number of top players per position to return
-        
+
     Returns
     -------
     dict
@@ -67,15 +70,19 @@ def get_undervalued_players_data(csv_path: str, top_n: int = 5) -> Dict[str, Lis
     csv_file = Path(csv_path)
     if not csv_file.exists():
         raise FileNotFoundError(f"CSV not found: {csv_file}")
-    
+
     df = pd.read_csv(csv_path)
     df = preprocess_data(df)
-    
+
     undervalued = {}
-    for position in ['QB', 'RB', 'WR', 'TE', 'DST']:
-        position_data = df[df['player_position_id'] == position].sort_values('value', ascending=False)
+    for position in ["QB", "RB", "WR", "TE", "DST"]:
+        position_data = df[df["player_position_id"] == position].sort_values(
+            "value", ascending=False
+        )
         # Convert to list of dicts for JSON serialization
-        players_list = position_data.head(top_n)[['player_name', 'team', 'salary', 'projected_points', 'value']].to_dict('records')
+        players_list = position_data.head(top_n)[
+            ["player_name", "team", "salary", "projected_points", "value"]
+        ].to_dict("records")
         undervalued[position] = players_list
-    
+
     return undervalued
