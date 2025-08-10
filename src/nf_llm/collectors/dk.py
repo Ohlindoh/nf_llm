@@ -5,6 +5,9 @@ import csv
 from typing import Optional, Dict, Any, List
 import os
 import argparse
+from pathlib import Path
+import datetime as dt
+import pandas as pd
 
 
 logging.basicConfig(
@@ -51,6 +54,28 @@ def get_contest_by_type(
     return None
 
 
+def write_raw_dk(df, slate_id: str):
+    """Save raw DraftKings data snapshot by slate."""
+    out = Path(f"data/raw/dk_salaries/{slate_id}_raw.csv")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out, index=False)
+    print(f"[dk] raw snapshot → {out.resolve()}  ({len(df)} rows)")
+
+
+def generate_slate_id(contest_type: str, draft_group_id: int) -> str:
+    """Generate a slate ID based on contest info and current date."""
+    # Get current date for week calculation
+    now = dt.datetime.now()
+    year = now.year
+    
+    # Simple week calculation (could be refined)
+    week_of_year = now.isocalendar()[1]
+    
+    # Create slate ID
+    slate_id = f"DK_{contest_type.upper()}_{year}W{week_of_year:02d}_{draft_group_id}"
+    return slate_id
+
+
 def collect_draftkings_data(
     contest_type: str, draft_group_id: Optional[int] = None
 ) -> Optional[List[Dict[str, Any]]]:
@@ -58,7 +83,13 @@ def collect_draftkings_data(
     try:
         if draft_group_id is None:
             # Get contests
-            response = requests.get(CONTESTS_URL)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'application/json',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://www.draftkings.com/'
+            }
+            response = requests.get(CONTESTS_URL, headers=headers)
             response.raise_for_status()
             contests = response.json().get("Contests", [])
 
@@ -75,14 +106,63 @@ def collect_draftkings_data(
         else:
             logger.info(f"Using provided draft group ID: {draft_group_id}")
 
-        # Fetch draftables data
-        response = requests.get(DRAFTABLES_URL.format(draft_group_id))
+        # Fetch draftables data with proper headers
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.draftkings.com/',
+            'Origin': 'https://www.draftkings.com'
+        }
+        
+        draftables_url = DRAFTABLES_URL.format(draft_group_id)
+        logger.info(f"Requesting URL: {draftables_url}")
+        
+        response = requests.get(draftables_url, headers=headers)
+        logger.info(f"Response status code: {response.status_code}")
+        
+        if response.status_code == 404:
+            logger.error(f"Draft group {draft_group_id} not found. This could mean:")
+            logger.error("1. The draft group ID is invalid or expired")
+            logger.error("2. The contest is not yet available for drafting")
+            logger.error("3. The contest has already closed")
+            logger.error("4. The API endpoint structure has changed")
+            return None
+            
         response.raise_for_status()
         data = response.json()
 
+        # DEBUG: Save raw data preview to see all available fields
+        if data.get("draftables"):
+            raw_data = []
+            for player in data["draftables"]:
+                raw_data.append(player)
+            
+            if raw_data:
+                df_raw = pd.DataFrame(raw_data)
+                
+                # 1) Save a wider preview without dropping columns
+                df_raw.to_csv("data/dk_raw_preview.csv", index=False)
+                
+                # 2) Print the available columns so we see what's there
+                print("[dk] available columns:", list(df_raw.columns)[:20], "...")
+                print(f"[dk] total columns: {len(df_raw.columns)}")
+
         # Process the data
         processed_data = []
+        seen_players = set()  # Track unique players to avoid duplicates
+        
+        slate_id = generate_slate_id(contest_type, draft_group_id)
+        write_raw_dk(pd.DataFrame(data["draftables"]), slate_id)
+
         for player in data["draftables"]:
+            player_key = (player["displayName"], player["salary"])
+            
+            # Skip if we've already seen this exact player/salary combination
+            if player_key in seen_players:
+                continue
+                
+            seen_players.add(player_key)
             processed_player = {
                 "player_name": player["displayName"],
                 "salary": player["salary"],
@@ -124,6 +204,38 @@ def write_to_csv(data: List[Dict[str, Any]], filename: str = "dk.csv"):
         logger.error(f"Error writing to CSV file: {e}")
 
 
+def list_available_contests():
+    """List all available contests and their draft group IDs for debugging."""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.draftkings.com/'
+        }
+        response = requests.get(CONTESTS_URL, headers=headers)
+        response.raise_for_status()
+        contests = response.json().get("Contests", [])
+        
+        print(f"Found {len(contests)} available contests:")
+        print("-" * 80)
+        
+        for contest in contests[:20]:  # Show first 20 contests
+            draft_group_id = contest.get("dg", "N/A")
+            contest_name = contest.get("n", "Unknown")
+            entry_fee = contest.get("a", "N/A")
+            entries = contest.get("m", "N/A")
+            
+            print(f"Draft Group ID: {draft_group_id}")
+            print(f"Contest Name: {contest_name}")
+            print(f"Entry Fee: ${entry_fee}")
+            print(f"Max Entries: {entries}")
+            print("-" * 40)
+            
+    except Exception as e:
+        logger.error(f"Error fetching contests: {e}")
+
+
 def main(contest_type: str, draft_group_id: Optional[int] = None):
     data = collect_draftkings_data(contest_type, draft_group_id)
     if data:
@@ -153,6 +265,14 @@ if __name__ == "__main__":
         default=None,
         help="Draft group ID (overrides contest type if provided)",
     )
+    parser.add_argument(
+        "--list_contests",
+        action="store_true",
+        help="List all available contests and their draft group IDs",
+    )
     args = parser.parse_args()
 
-    main(args.contest_type, args.draft_group_id)
+    if args.list_contests:
+        list_available_contests()
+    else:
+        main(args.contest_type, args.draft_group_id)
