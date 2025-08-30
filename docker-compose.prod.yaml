@@ -1,0 +1,95 @@
+version: "3.9"
+
+volumes:
+  duckdata:
+    driver: local
+
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge
+
+services:
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      uv run uvicorn nf_llm.api.main:app 
+      --host 0.0.0.0 
+      --port 8000 
+      --workers 4
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-duckdb:////app/data/nf_llm.duckdb}
+      - PYTHONPATH=/app/src
+      - ENVIRONMENT=production
+    volumes:
+      - duckdata:/app/data
+    networks: [backend]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  ui:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      uv run streamlit run src/nf_llm/app.py 
+      --server.port 8501 
+      --server.address 0.0.0.0
+      --server.enableCORS false
+      --server.enableXsrfProtection false
+      --server.headless true
+    environment:
+      - API_BASE_URL=http://api:8000
+      - PYTHONPATH=/app/src
+      - ENVIRONMENT=production
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - duckdata:/app/data
+    networks: [backend, frontend]
+    ports:
+      - "8501:8501"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # Reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - ui
+      - api
+    networks: [frontend]
+    restart: always
+    profiles: ["production"]

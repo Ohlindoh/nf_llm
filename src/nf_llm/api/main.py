@@ -32,6 +32,12 @@ class UndervaluedPlayersResponse(BaseModel):
     players: Dict[str, List[Dict[str, Any]]]
 
 
+@app.on_event("startup")
+def on_startup():
+    # Database initialization - remove if not needed
+    pass
+
+
 @app.post("/optimise", response_model=LineupResponse)
 def optimise(req: LineupRequest):
     """
