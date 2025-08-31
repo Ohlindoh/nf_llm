@@ -206,6 +206,35 @@ def create_fantasy_football_ui():
         st.experimental_rerun()
 
 
+def create_espn_team_ui():
+    """Simple interface for viewing a user's ESPN fantasy team."""
+    st.title("ESPN Team Viewer")
+    league_id = st.text_input("League ID", "")
+    year = st.number_input("Season Year", min_value=2000, max_value=2100, value=2024)
+    swid = st.text_input("SWID")
+    espn_s2 = st.text_input("ESPN_S2")
+
+    if st.button("Load Team"):
+        try:
+            from nf_llm.fantasy_football.espn import get_user_team
+
+            roster = get_user_team(int(league_id), int(year), swid, espn_s2)
+            if roster:
+                st.dataframe(pd.DataFrame(roster))
+            else:
+                st.info("No players found for this team.")
+        except Exception as e:  # pragma: no cover - UI feedback only
+            st.error(f"Failed to load team: {e}")
+
+
+def main():
+    page = st.sidebar.radio("Mode", ["DFS", "ESPN"])
+    if page == "DFS":
+        create_fantasy_football_ui()
+    else:
+        create_espn_team_ui()
+
+
 # Run the app
 if __name__ == "__main__":
-    create_fantasy_football_ui()
+    main()
