@@ -5,9 +5,9 @@ Keeps LineupOptimizer details out of the HTTP layer.
 """
 
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any
+
 import pandas as pd
-import traceback, logging
 
 from nf_llm.data_io import preprocess_data
 from nf_llm.optimizer import LineupOptimizer
@@ -21,17 +21,19 @@ except Exception:  # pragma: no cover - handled at runtime
 def build_lineups(
     csv_path: str,
     slate_id: str,
-    constraints: Dict[str, Any],
-) -> List[Dict]:
+    constraints: dict[str, Any],
+) -> list[dict]:
     """
     Parameters
     ----------
     csv_path : str
         Path to the player CSV (relative or absolute).
     slate_id : str
-        Identifier you care about (passed through for logging; optimiser ignores it for now).
+        Identifier you care about (passed through for logging;
+        optimiser ignores it for now).
     constraints : dict
-        Same structure Streamlit already builds: num_lineups, max_exposure, must_include, etc.
+        Same structure Streamlit already builds: num_lineups,
+        max_exposure, must_include, etc.
 
     Returns
     -------
@@ -55,7 +57,7 @@ def build_lineups(
 
 def get_undervalued_players_data(
     csv_path: str, top_n: int = 5
-) -> Dict[str, List[Dict]]:
+) -> dict[str, list[dict]]:
     """
     Get most undervalued players by position.
 
@@ -96,9 +98,11 @@ def get_undervalued_players_data(
 # ---------------------------------------------------------------------------
 # ESPN weekly plan
 # ---------------------------------------------------------------------------
-def _parse_preferences(text: str) -> Dict[str, float]:
+
+
+def _parse_preferences(text: str) -> dict[str, float]:
     """Very small helper to convert natural language hints to numeric nudges."""
-    prefs: Dict[str, float] = {}
+    prefs: dict[str, float] = {}
     if not text:
         return prefs
 
@@ -112,7 +116,7 @@ def _parse_preferences(text: str) -> Dict[str, float]:
     return prefs
 
 
-def _player_to_dict(player) -> Dict[str, Any]:
+def _player_to_dict(player) -> dict[str, Any]:
     return {
         "name": getattr(player, "name", ""),
         "pos": getattr(player, "position", ""),
@@ -127,10 +131,10 @@ def compute_weekly_plan(
     year: int,
     espn_s2: str,
     swid: str,
-    preferences_text: Optional[str] = None,
+    preferences_text: str | None = None,
     max_acquisitions: int = 2,
-    positions_to_fill: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    positions_to_fill: list[str] | None = None,
+) -> dict[str, Any]:
     """Compute start/sit and acquisition recommendations using ESPN data."""
 
     if League is None:  # pragma: no cover - runtime guard
@@ -189,7 +193,7 @@ def compute_weekly_plan(
     if prefs.get("dome_bonus_pts"):
         notes.append("Preferences applied: ok to chase dome games (+0.3)")
 
-    def adjusted_proj(p_dict: Dict[str, Any]) -> float:
+    def adjusted_proj(p_dict: dict[str, Any]) -> float:
         proj = p_dict["proj"]
         if p_dict.get("injury_status") == "QUESTIONABLE":
             proj -= prefs.get("injury_penalty_pts", 0)
@@ -204,7 +208,7 @@ def compute_weekly_plan(
 
     # ---- Step 4 & 5: simple optimiser ----
     # Baseline lineup using greedy assignment
-    slot_order: List[str] = []
+    slot_order: list[str] = []
     if isinstance(slots, dict):
         for slot, count in slots.items():
             slot_order.extend([slot] * count)
@@ -212,7 +216,7 @@ def compute_weekly_plan(
         slot_order = list(slots)
 
     remaining = your_roster.copy()
-    chosen: Dict[str, Dict[str, Any]] = {}
+    chosen: dict[str, dict[str, Any]] = {}
     used = set()
     for slot in slot_order:
         eligible = [p for p in remaining if p["pos"] == slot and id(p) not in used]
@@ -254,6 +258,11 @@ def compute_weekly_plan(
                     repl_player = starter
         if repl_player and cand["adj_proj_wk"] > repl_player["adj_proj_wk"]:
             delta = cand["adj_proj_wk"] - repl_player["adj_proj_wk"]
+            why = (
+                f"Proj {cand['adj_proj_wk']:.1f} "
+                f"vs {repl_player['adj_proj_wk']:.1f} "
+                f"(+{delta:.1f})"
+            )
             acquisitions.append(
                 {
                     "name": cand["name"],
@@ -263,7 +272,7 @@ def compute_weekly_plan(
                     "adj_proj_wk": cand["adj_proj_wk"],
                     "par_op": delta,
                     "delta_points_if_acquired": delta,
-                    "why": f"Proj {cand['adj_proj_wk']:.1f} vs {repl_player['adj_proj_wk']:.1f} (+{delta:.1f})",
+                    "why": why,
                 }
             )
             if len(acquisitions) >= max_acquisitions:

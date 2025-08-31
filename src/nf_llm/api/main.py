@@ -1,9 +1,9 @@
+import logging
+import traceback
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional
-import logging
-from logging import error
-import traceback
 
 from nf_llm.service import build_lineups, compute_weekly_plan
 
@@ -13,14 +13,14 @@ app = FastAPI(title="NF-LLM API", version="0.1.0")
 class LineupRequest(BaseModel):
     csv_path: str = Field(..., description="Path to player CSV")
     slate_id: str = Field(..., description="Contest or slate identifier")
-    constraints: Dict[str, Any] = Field(
+    constraints: dict[str, Any] = Field(
         default_factory=dict,
         description="Optimizer constraints (num_lineups, max_exposure, etc.)",
     )
 
 
 class LineupResponse(BaseModel):
-    lineups: List[Dict[str, Any]]
+    lineups: list[dict[str, Any]]
 
 
 class UndervaluedPlayersRequest(BaseModel):
@@ -29,7 +29,7 @@ class UndervaluedPlayersRequest(BaseModel):
 
 
 class UndervaluedPlayersResponse(BaseModel):
-    players: Dict[str, List[Dict[str, Any]]]
+    players: dict[str, list[dict[str, Any]]]
 
 
 class WeeklyPlanRequest(BaseModel):
@@ -37,24 +37,28 @@ class WeeklyPlanRequest(BaseModel):
     year: int
     espn_s2: str
     swid: str
-    preferences_text: Optional[str] = None
+    preferences_text: str | None = None
     max_acquisitions: int = 2
-    positions_to_fill: Optional[List[str]] = None
+    positions_to_fill: list[str] | None = None
 
 
 class WeeklyPlanResponse(BaseModel):
-    meta: Dict[str, Any]
-    league_profile: Dict[str, Any]
-    start_sit: Dict[str, Any]
-    acquisitions: List[Dict[str, Any]]
-    notes: List[str]
+    meta: dict[str, Any]
+    league_profile: dict[str, Any]
+    start_sit: dict[str, Any]
+    acquisitions: list[dict[str, Any]]
+    notes: list[str]
+
+
+@app.on_event("startup")
+def on_startup():
+    # Database initialization - remove if not needed
+    pass
 
 
 @app.post("/optimise", response_model=LineupResponse)
 def optimise(req: LineupRequest):
-    """
-    Thin HTTP wrapper that delegates to the pure function.
-    """
+    """Thin HTTP wrapper that delegates to the pure function."""
     try:
         lineups = build_lineups(
             csv_path=req.csv_path,
@@ -62,9 +66,9 @@ def optimise(req: LineupRequest):
             constraints=req.constraints,
         )
     except FileNotFoundError as err:
-        raise HTTPException(status_code=404, detail=str(err))
+        raise HTTPException(status_code=404, detail=str(err)) from err
     except ValueError as err:
-        raise HTTPException(status_code=400, detail=str(err))
+        raise HTTPException(status_code=400, detail=str(err)) from err
     except Exception as err:
         logging.error("Optimiser crashed:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal optimiser error") from err
@@ -74,16 +78,14 @@ def optimise(req: LineupRequest):
 
 @app.post("/undervalued-players", response_model=UndervaluedPlayersResponse)
 def get_undervalued_players_endpoint(req: UndervaluedPlayersRequest):
-    """
-    Get most undervalued players by position.
-    """
+    """Get most undervalued players by position."""
     try:
         from nf_llm.service import get_undervalued_players_data
 
         players = get_undervalued_players_data(req.csv_path, req.top_n)
         return {"players": players}
     except FileNotFoundError as err:
-        raise HTTPException(status_code=404, detail=str(err))
+        raise HTTPException(status_code=404, detail=str(err)) from err
     except Exception as err:
         logging.error(
             "Undervalued players endpoint crashed:\n%s", traceback.format_exc()
@@ -108,7 +110,7 @@ def espn_weekly_plan(req: WeeklyPlanRequest):
         )
         return plan
     except RuntimeError as err:
-        raise HTTPException(status_code=501, detail=str(err))
+        raise HTTPException(status_code=501, detail=str(err)) from err
     except Exception as err:
         logging.error("Weekly plan endpoint crashed:\n%s", traceback.format_exc())
         raise HTTPException(

@@ -1,61 +1,86 @@
 version: "3.9"
 
-secrets:
-  openai_api_key:                   # <-- global definition
-    file: ../nf_secrets/openai_api_key.txt
-  db_password:
-    file: ../nf_secrets/db_password.txt
+volumes:
+  duckdata:
+    driver: local
+
+networks:
+  backend:
+    driver: bridge
 
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: nf_db
-    environment:
-      POSTGRES_USER: nf_user
-      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
-      POSTGRES_DB: nf_llm
-    secrets:
-      - db_password
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nf_user -d nf_llm"]
-      interval: 5s
-      retries: 5
   api:
-    build: .
-    container_name: nf_api
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "8000:8000"   # host:container
+    build: 
+      context: .
+      target: runtime
     command: >
-      uvicorn nf_llm.api.main:app
-      --host 0.0.0.0
-      --port 8000
+      uvicorn nf_llm.api.main:app 
+      --host 0.0.0.0 
+      --port 8000 
       --reload
     environment:
-      DATABASE_URL: postgresql+psycopg2://nf_user@db:5432/nf_llm
-    secrets:
-      - db_password
+      - DATABASE_URL=duckdb:////app/data/nf_llm.duckdb
+      - PYTHONPATH=/app/src
+    volumes:
+      - duckdata:/app/data
+      - .:/app:cached  # For development hot reload
+    networks: [backend]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
 
   ui:
-    build: .
-    container_name: nf_ui
+    build: 
+      context: .
+      target: runtime
+    command: >
+      streamlit run src/nf_llm/app.py 
+      --server.port 8501 
+      --server.address 0.0.0.0
+      --server.enableCORS false
+      --server.enableXsrfProtection false
+    environment:
+      - API_BASE_URL=http://api:8000
+      - PYTHONPATH=/app/src
     depends_on:
-      db:
+      api:
         condition: service_healthy
+    volumes:
+      - duckdata:/app/data
+      - .:/app:cached  # For development hot reload
+    networks: [backend]
     ports:
       - "8501:8501"
-    secrets:
-      - openai_api_key
-      - db_password
-    environment:
-      DATABASE_URL: postgresql+psycopg2://nf_user@db:5432/nf_llm
-    volumes:
-      # keep collectors’ CSVs, but we’ll drop the SQLite file shortly
-      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
 
-volumes:
-  pgdata:
+  # Optional: Database management service
+  db-admin:
+    build: 
+      context: .
+      target: runtime
+    command: >
+      python -c "
+      import time
+      import duckdb
+      print('Database admin ready. Connect to /app/data/nf_llm.duckdb')
+      while True: time.sleep(60)
+      "
+    environment:
+      - DATABASE_URL=duckdb:////app/data/nf_llm.duckdb
+    volumes:
+      - duckdata:/app/data
+      - .:/app:cached
+    networks: [backend]
+    profiles: ["admin"]  # Only start with --profile admin
