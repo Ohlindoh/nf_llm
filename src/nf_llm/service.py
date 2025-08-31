@@ -86,3 +86,46 @@ def get_undervalued_players_data(
         undervalued[position] = players_list
 
     return undervalued
+
+
+def benchmark_optimization(
+    csv_path: str,
+    slate_id: str,
+    constraints: Dict[str, Any] = None,
+    test_counts: List[int] = None,
+) -> Dict[str, Any]:
+    """
+    Benchmark different scenario counts to find optimal performance/quality trade-off.
+    
+    Parameters
+    ----------
+    csv_path : str
+        Path to the player CSV file
+    slate_id : str
+        Identifier for the slate (for logging)
+    constraints : dict, optional
+        Optimization constraints
+    test_counts : list, optional
+        List of scenario counts to test (default: [10, 25, 50, 75, 100])
+    
+    Returns
+    -------
+    dict
+        Benchmark results with performance metrics for each scenario count
+    """
+    # Load data
+    csv_file = Path(csv_path)
+    if not csv_file.exists():
+        raise FileNotFoundError(f"CSV not found: {csv_file}")
+
+    df = pd.read_csv(csv_file)
+    df = preprocess_data(df)
+
+    # Run benchmark
+    opt = LineupOptimizer(df)
+    results = opt.benchmark_scenario_counts(
+        constraints=constraints or {}, 
+        test_counts=test_counts
+    )
+    
+    return results

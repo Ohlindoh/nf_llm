@@ -84,30 +84,47 @@ class LineupOptimizer:
 
     def generate_lineup(self, constraints: Dict = None) -> Dict:
         """Generate a single optimized lineup based on constraints."""
-        print("Starting lineup generation...")  # Debug print
-        scenarios = self._generate_scenarios(num_scenarios=100)
-        print(f"Generated {len(scenarios)} scenarios")  # Debug print
-
+        print("Starting lineup generation...")
+        
+        # Use adaptive scenario generation with convergence detection
+        max_scenarios = 100
+        min_scenarios = 25
+        convergence_threshold = 0.01  # 1% improvement threshold
+        
         lineups = []
         scores = []
-        total_scenarios = len(scenarios)
-
-        for idx, scenario in enumerate(scenarios):
-            if idx % 10 == 0:  # Print progress every 10 scenarios
-                print(f"Processing scenario {idx + 1}/{total_scenarios}")
-
+        best_score = 0
+        scenarios_without_improvement = 0
+        
+        for scenario_idx in range(max_scenarios):
+            # Generate single scenario
+            scenario = self._generate_single_scenario()
+            
+            if scenario_idx % 10 == 0:
+                print(f"Processing scenario {scenario_idx + 1}, best score so far: {best_score:.2f}")
+            
             lineup = self._optimize_single_scenario(scenario, constraints or {})
             if lineup:
                 score = self._get_lineup_score(lineup)
-                print(
-                    f"Scenario {idx + 1} produced valid lineup with score: {score}"
-                )  # Debug print
                 lineups.append(lineup)
                 scores.append(score)
+                
+                # Check for convergence
+                if score > best_score * (1 + convergence_threshold):
+                    best_score = score
+                    scenarios_without_improvement = 0
+                    print(f"New best score: {score:.2f} at scenario {scenario_idx + 1}")
+                else:
+                    scenarios_without_improvement += 1
+                
+                # Early stopping if we've found enough good solutions
+                if (scenario_idx >= min_scenarios and 
+                    scenarios_without_improvement >= 15 and 
+                    len(lineups) >= 5):
+                    print(f"Converged after {scenario_idx + 1} scenarios (no improvement for 15 iterations)")
+                    break
 
-        print(
-            f"Found {len(lineups)} valid lineups out of {total_scenarios} scenarios"
-        )  # Debug print
+        print(f"Completed optimization with {len(lineups)} valid lineups from {scenario_idx + 1} scenarios")
 
         if not lineups:
             return {"error": "No valid lineup found"}
@@ -124,16 +141,54 @@ class LineupOptimizer:
                 unique_lineups.append(lineup)
                 unique_scores.append(score)
 
-        print(f"Found {len(unique_lineups)} unique lineups")  # Debug print
+        print(f"Found {len(unique_lineups)} unique lineups")
 
         # Return the best unique lineup
         best_idx = unique_scores.index(max(unique_scores))
         best_score = unique_scores[best_idx]
-        print(f"Selected best lineup with score: {best_score}")  # Debug print
+        print(f"Selected best lineup with score: {best_score}")
 
         return unique_lineups[best_idx]
 
-    # optimizer.py
+    def _generate_single_scenario(self) -> pd.DataFrame:
+        """Generate a single scenario for optimization."""
+        scenario = self.data.copy()
+
+        # Add random noise to projected points (10% standard deviation)
+        noise = np.random.normal(1, 0.1, size=len(scenario))
+
+        # Apply position-specific adjustments
+        position_multipliers = (
+            scenario["player_position_id"]
+            .map(
+                {
+                    "TE": 0.95,  # Slightly lower TE projections
+                    "RB": 1.02,  # Slightly higher RB projections
+                    "WR": 1.02,  # Slightly higher WR projections
+                    "QB": 1.0,  # Keep QB as is
+                    "DST": 1.0,  # Keep DST as is
+                }
+            )
+            .fillna(1.0)
+        )
+
+        # Apply strategy boosts from analysis
+        strategy_boosts = pd.Series(
+            [
+                self.strategy_boost.get(name, 0)
+                for name in scenario["player_name"]
+            ],
+            index=scenario.index,
+        )
+
+        # Combine all adjustments
+        total_multiplier = noise * position_multipliers * (1 + strategy_boosts)
+        scenario["projected_points"] = (
+            scenario["projected_points"] * total_multiplier
+        )
+
+        return scenario
+
     def apply_strategy_adjustments(self, analysis_results: Dict):
         """Apply strategy-based adjustments to player projections."""
         self.strategy_boost = {}
@@ -160,65 +215,17 @@ class LineupOptimizer:
                     self.strategy_boost.get(stack["receiver"], 0), receiver_boost
                 )
 
-    def _generate_scenarios(self, num_scenarios: int = 100) -> List[pd.DataFrame]:
-        """Generate multiple scenarios for lineup optimization."""
-        scenarios = []
-        for _ in range(num_scenarios):
-            try:
-                scenario = self.data.copy()
-
-                # Add random noise to projected points (10% standard deviation)
-                noise = np.random.normal(1, 0.1, size=len(scenario))
-
-                # Apply position-specific adjustments
-                position_multipliers = (
-                    scenario["player_position_id"]
-                    .map(
-                        {
-                            "TE": 0.95,  # Slightly lower TE projections
-                            "RB": 1.02,  # Slightly higher RB projections
-                            "WR": 1.02,  # Slightly higher WR projections
-                            "QB": 1.0,  # Keep QB as is
-                            "DST": 1.0,  # Keep DST as is
-                        }
-                    )
-                    .fillna(1.0)
-                )
-
-                # Apply strategy boosts from analysis
-                strategy_boosts = pd.Series(
-                    [
-                        self.strategy_boost.get(name, 0)
-                        for name in scenario["player_name"]
-                    ],
-                    index=scenario.index,
-                )
-
-                # Combine all adjustments
-                total_multiplier = noise * position_multipliers * (1 + strategy_boosts)
-                scenario["projected_points"] = (
-                    scenario["projected_points"] * total_multiplier
-                )
-
-                scenarios.append(scenario)
-
-            except Exception as e:
-                print(f"Error generating scenario: {str(e)}")
-                continue
-
-        return scenarios
-
     def _optimize_single_scenario(
         self, scenario: pd.DataFrame, constraints: Dict
     ) -> Optional[Dict]:
         """Optimize a single scenario with given constraints."""
         try:
-            print("Starting scenario optimization...")  # Debug print
+            print("Starting scenario optimization...")
             prob = pulp.LpProblem("Fantasy_Football", pulp.LpMaximize)
 
             # Create decision variables
             players = scenario.to_dict("records")
-            print(f"Processing {len(players)} players")  # Debug print
+            print(f"Processing {len(players)} players")
 
             base_vars = pulp.LpVariable.dicts(
                 "players",
@@ -250,33 +257,33 @@ class LineupOptimizer:
                 for p in players
             )
 
-            print("Adding constraints...")  # Debug print
+            print("Adding constraints...")
             self._add_constraints(prob, base_vars, flex_vars, players, constraints)
 
-            print("Solving optimization problem...")  # Debug print
+            print("Solving optimization problem...")
             prob.solve(pulp.PULP_CBC_CMD(msg=False))
 
             if pulp.LpStatus[prob.status] == "Optimal":
                 print(
                     f"Found optimal solution with status: {pulp.LpStatus[prob.status]}"
-                )  # Debug print
+                )
                 lineup = self._build_lineup_from_solution(base_vars, flex_vars, players)
                 if self._validate_lineup(lineup):
                     print(
                         f"Built valid lineup with {len(lineup)} players"
-                    )  # Debug print
+                    )
                     return lineup
                 else:
-                    print("Built lineup failed validation")  # Debug print
+                    print("Built lineup failed validation")
                     return None
             else:
                 print(
                     f"No optimal solution found. Status: {pulp.LpStatus[prob.status]}"
-                )  # Debug print
+                )
                 return None
 
         except Exception as e:
-            print(f"Error in optimization: {str(e)}")  # Debug print
+            print(f"Error in optimization: {str(e)}")
             return None
 
     def _validate_lineup(self, lineup: Dict) -> bool:
@@ -520,7 +527,7 @@ class LineupOptimizer:
                 used_players.add(name)
                 break
 
-        print(f"Built lineup with {len(lineup)} players")  # Debug print
+        print(f"Built lineup with {len(lineup)} players")
         return lineup
 
     def _get_lineup_score(self, lineup: Dict) -> float:
