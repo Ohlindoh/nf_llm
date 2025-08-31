@@ -1,10 +1,10 @@
-import requests
-import pandas as pd
-import re
 import json
 import logging
-from typing import Optional, Dict, List
 import os
+import re
+
+import pandas as pd
+import requests
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -17,7 +17,7 @@ OUTPUT_DIR = "data"
 OUTPUT_FILE = "fantasy_projections.csv"
 
 
-def fetch_fantasy_pros_data(url: str) -> Optional[str]:
+def fetch_fantasy_pros_data(url: str) -> str | None:
     """Fetch data from the given URL."""
     try:
         headers = {
@@ -31,7 +31,7 @@ def fetch_fantasy_pros_data(url: str) -> Optional[str]:
         return None
 
 
-def parse_fantasy_pros_data(html_content: str) -> Optional[Dict]:
+def parse_fantasy_pros_data(html_content: str) -> dict | None:
     """Parse the HTML content to extract player data."""
     try:
         # Look for any JavaScript object that contains player data
@@ -51,7 +51,7 @@ def parse_fantasy_pros_data(html_content: str) -> Optional[Dict]:
 
 def collect_and_clean_fantasy_pros_data() -> pd.DataFrame:
     """Collect, combine, and clean data from all ranking pages."""
-    all_data: List[Dict] = []
+    all_data: list[dict] = []
 
     for ranking in RANKINGS:
         url = f"{BASE_URL}/{ranking}"

@@ -1,14 +1,13 @@
-import requests
-import logging
-import re
-import csv
-from typing import Optional, Dict, Any, List
-import os
 import argparse
-from pathlib import Path
+import csv
 import datetime as dt
-import pandas as pd
+import logging
+import os
+from pathlib import Path
+from typing import Any
 
+import pandas as pd
+import requests
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -20,8 +19,8 @@ DRAFTABLES_URL = "https://api.draftkings.com/draftgroups/v1/draftgroups/{}/draft
 
 
 def get_contest_by_type(
-    contests: List[Dict[str, Any]], contest_type: str
-) -> Optional[Dict[str, Any]]:
+    contests: list[dict[str, Any]], contest_type: str
+) -> dict[str, Any] | None:
     """Find a contest based on the specified type."""
     contest_type = contest_type.lower()
 
@@ -67,18 +66,18 @@ def generate_slate_id(contest_type: str, draft_group_id: int) -> str:
     # Get current date for week calculation
     now = dt.datetime.now()
     year = now.year
-    
+
     # Simple week calculation (could be refined)
     week_of_year = now.isocalendar()[1]
-    
+
     # Create slate ID
     slate_id = f"DK_{contest_type.upper()}_{year}W{week_of_year:02d}_{draft_group_id}"
     return slate_id
 
 
 def collect_draftkings_data(
-    contest_type: str, draft_group_id: Optional[int] = None
-) -> Optional[List[Dict[str, Any]]]:
+    contest_type: str, draft_group_id: int | None = None
+) -> list[dict[str, Any]] | None:
     """Collect DraftKings data for NFL contests."""
     try:
         if draft_group_id is None:
@@ -114,13 +113,13 @@ def collect_draftkings_data(
             'Referer': 'https://www.draftkings.com/',
             'Origin': 'https://www.draftkings.com'
         }
-        
+
         draftables_url = DRAFTABLES_URL.format(draft_group_id)
         logger.info(f"Requesting URL: {draftables_url}")
-        
+
         response = requests.get(draftables_url, headers=headers)
         logger.info(f"Response status code: {response.status_code}")
-        
+
         if response.status_code == 404:
             logger.error(f"Draft group {draft_group_id} not found. This could mean:")
             logger.error("1. The draft group ID is invalid or expired")
@@ -128,7 +127,7 @@ def collect_draftkings_data(
             logger.error("3. The contest has already closed")
             logger.error("4. The API endpoint structure has changed")
             return None
-            
+
         response.raise_for_status()
         data = response.json()
 
@@ -137,13 +136,13 @@ def collect_draftkings_data(
             raw_data = []
             for player in data["draftables"]:
                 raw_data.append(player)
-            
+
             if raw_data:
                 df_raw = pd.DataFrame(raw_data)
-                
+
                 # 1) Save a wider preview without dropping columns
                 df_raw.to_csv("data/dk_raw_preview.csv", index=False)
-                
+
                 # 2) Print the available columns so we see what's there
                 print("[dk] available columns:", list(df_raw.columns)[:20], "...")
                 print(f"[dk] total columns: {len(df_raw.columns)}")
@@ -151,17 +150,17 @@ def collect_draftkings_data(
         # Process the data
         processed_data = []
         seen_players = set()  # Track unique players to avoid duplicates
-        
+
         slate_id = generate_slate_id(contest_type, draft_group_id)
         write_raw_dk(pd.DataFrame(data["draftables"]), slate_id)
 
         for player in data["draftables"]:
             player_key = (player["displayName"], player["salary"])
-            
+
             # Skip if we've already seen this exact player/salary combination
             if player_key in seen_players:
                 continue
-                
+
             seen_players.add(player_key)
             processed_player = {
                 "player_name": player["displayName"],
@@ -181,7 +180,7 @@ def collect_draftkings_data(
     return None
 
 
-def write_to_csv(data: List[Dict[str, Any]], filename: str = "dk.csv"):
+def write_to_csv(data: list[dict[str, Any]], filename: str = "dk.csv"):
     """Write the processed data to a CSV file."""
     if not data:
         logger.error("No data to write to CSV")
@@ -200,7 +199,7 @@ def write_to_csv(data: List[Dict[str, Any]], filename: str = "dk.csv"):
             for row in data:
                 writer.writerow(row)
         logger.info(f"Successfully wrote data to {filepath}")
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Error writing to CSV file: {e}")
 
 
@@ -216,27 +215,27 @@ def list_available_contests():
         response = requests.get(CONTESTS_URL, headers=headers)
         response.raise_for_status()
         contests = response.json().get("Contests", [])
-        
+
         print(f"Found {len(contests)} available contests:")
         print("-" * 80)
-        
+
         for contest in contests[:20]:  # Show first 20 contests
             draft_group_id = contest.get("dg", "N/A")
             contest_name = contest.get("n", "Unknown")
             entry_fee = contest.get("a", "N/A")
             entries = contest.get("m", "N/A")
-            
+
             print(f"Draft Group ID: {draft_group_id}")
             print(f"Contest Name: {contest_name}")
             print(f"Entry Fee: ${entry_fee}")
             print(f"Max Entries: {entries}")
             print("-" * 40)
-            
+
     except Exception as e:
         logger.error(f"Error fetching contests: {e}")
 
 
-def main(contest_type: str, draft_group_id: Optional[int] = None):
+def main(contest_type: str, draft_group_id: int | None = None):
     data = collect_draftkings_data(contest_type, draft_group_id)
     if data:
         print(f"Successfully collected data for {len(data)} players")

@@ -3,17 +3,17 @@ Display module for fantasy football lineup generator.
 Handles all Streamlit UI components and visualization.
 """
 
-import streamlit as st
-from typing import Dict, List, Optional
-import pandas as pd
 from dataclasses import dataclass
+
+import pandas as pd
+import streamlit as st
 
 
 @dataclass
 class DisplayConfig:
     """Configuration for display formatting."""
 
-    POSITION_ORDER: List[str] = None
+    POSITION_ORDER: list[str] = None
     DEFAULT_NUM_LINEUPS: int = 1
     DEFAULT_MAX_EXPOSURE: float = 0.3
 
@@ -35,7 +35,7 @@ class DisplayConfig:
 class FantasyDisplayManager:
     """Manages Streamlit UI components and display formatting."""
 
-    def __init__(self, config: Optional[DisplayConfig] = None):
+    def __init__(self, config: DisplayConfig | None = None):
         self.config = config or DisplayConfig()
         if "strategy_insights" not in st.session_state:
             st.session_state.strategy_insights = None
@@ -44,7 +44,7 @@ class FantasyDisplayManager:
         """Display application header."""
         st.title("Daily Fantasy Football Lineup Generator")
 
-    def show_strategy_section(self, analyzer) -> Optional[str]:
+    def show_strategy_section(self, analyzer) -> str | None:
         """Display strategy analysis section."""
         with st.expander("📊 View Strategy Analysis", expanded=True):
             st.subheader("Current Slate Analysis")
@@ -124,9 +124,9 @@ class FantasyDisplayManager:
 
     def display_lineup(
         self,
-        lineup: Dict,
-        idx: Optional[int] = None,
-        analysis_results: Optional[Dict] = None,
+        lineup: dict,
+        idx: int | None = None,
+        analysis_results: dict | None = None,
     ):
         """Display a single lineup with analysis."""
         if idx is not None:
@@ -183,7 +183,7 @@ class FantasyDisplayManager:
         if analysis_results:
             self._display_lineup_analysis(lineup, analysis_results)
 
-    def _display_lineup_analysis(self, lineup: Dict, analysis_results: Dict):
+    def _display_lineup_analysis(self, lineup: dict, analysis_results: dict):
         """Display detailed analysis for a lineup."""
         with st.expander("👓 View Lineup Analysis", expanded=False):
             # Check for value plays

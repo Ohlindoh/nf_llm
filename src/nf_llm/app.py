@@ -1,12 +1,11 @@
-import os
 import json
+import os
 import pathlib
+
+import httpx
 import pandas as pd
 import streamlit as st
-import httpx
 from autogen import AssistantAgent, UserProxyAgent
-from nf_llm.data_io import preprocess_data
-
 
 _secret_path = pathlib.Path("/run/secrets/openai_api_key")
 if not os.getenv("OPENAI_API_KEY") and _secret_path.exists():

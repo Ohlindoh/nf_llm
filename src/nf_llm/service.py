@@ -5,9 +5,9 @@ Keeps LineupOptimizer details out of the HTTP layer.
 """
 
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
+
 import pandas as pd
-import traceback, logging
 
 from nf_llm.data_io import preprocess_data
 from nf_llm.optimizer import LineupOptimizer
@@ -16,8 +16,8 @@ from nf_llm.optimizer import LineupOptimizer
 def build_lineups(
     csv_path: str,
     slate_id: str,
-    constraints: Dict[str, Any],
-) -> List[Dict]:
+    constraints: dict[str, Any],
+) -> list[dict]:
     """
     Parameters
     ----------
@@ -50,7 +50,7 @@ def build_lineups(
 
 def get_undervalued_players_data(
     csv_path: str, top_n: int = 5
-) -> Dict[str, List[Dict]]:
+) -> dict[str, list[dict]]:
     """
     Get most undervalued players by position.
 
@@ -91,9 +91,9 @@ def get_undervalued_players_data(
 def benchmark_optimization(
     csv_path: str,
     slate_id: str,
-    constraints: Dict[str, Any] = None,
-    test_counts: List[int] = None,
-) -> Dict[str, Any]:
+    constraints: dict[str, Any] = None,
+    test_counts: list[int] = None,
+) -> dict[str, Any]:
     """
     Benchmark different scenario counts to find optimal performance/quality trade-off.
     
@@ -124,8 +124,8 @@ def benchmark_optimization(
     # Run benchmark
     opt = LineupOptimizer(df)
     results = opt.benchmark_scenario_counts(
-        constraints=constraints or {}, 
+        constraints=constraints or {},
         test_counts=test_counts
     )
-    
+
     return results

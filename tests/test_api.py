@@ -2,6 +2,7 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+
 from nf_llm.api.main import app  # import the FastAPI instance
 
 client = TestClient(app)

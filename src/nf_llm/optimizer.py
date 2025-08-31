@@ -3,11 +3,11 @@ Lineup optimization logic for fantasy football.
 Handles lineup generation, constraints, and optimization strategies.
 """
 
+from dataclasses import dataclass, field
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Set
 import pulp
-from dataclasses import dataclass, field
 
 
 @dataclass
@@ -16,7 +16,7 @@ class LineupSettings:
 
     SALARY_CAP: int = 50000
     ROSTER_SIZE: int = 9
-    POSITIONS: Dict[str, int] = field(
+    POSITIONS: dict[str, int] = field(
         default_factory=lambda: {
             "QB": 1,
             "RB": 2,
@@ -26,14 +26,14 @@ class LineupSettings:
             "FLEX": 1,
         }
     )
-    FLEX_POSITIONS: Set[str] = field(default_factory=lambda: {"RB", "WR", "TE"})
+    FLEX_POSITIONS: set[str] = field(default_factory=lambda: {"RB", "WR", "TE"})
     MIN_SALARY: int = 45000  # Ensure lineups aren't too cheap
 
 
 class LineupOptimizer:
     """Handles DFS lineup optimization and generation."""
 
-    def __init__(self, data: pd.DataFrame, settings: Optional[LineupSettings] = None):
+    def __init__(self, data: pd.DataFrame, settings: LineupSettings | None = None):
         self.data = data
         self.settings = settings or LineupSettings()
         self.previous_lineups = []
@@ -58,7 +58,7 @@ class LineupOptimizer:
         self.data["salary"] = pd.to_numeric(self.data["salary"])
         self.data["projected_points"] = pd.to_numeric(self.data["projected_points"])
 
-    def generate_lineups(self, constraints: Dict) -> List[Dict]:
+    def generate_lineups(self, constraints: dict) -> list[dict]:
         """Generate multiple optimized lineups with exposure limits."""
         num_lineups = int(constraints.get("num_lineups", 1))
         max_exposure = float(constraints.get("max_exposure", 0.3))
@@ -82,33 +82,33 @@ class LineupOptimizer:
 
         return lineups
 
-    def generate_lineup(self, constraints: Dict = None) -> Dict:
+    def generate_lineup(self, constraints: dict = None) -> dict:
         """Generate a single optimized lineup based on constraints."""
         print("Starting lineup generation...")
-        
+
         # Use adaptive scenario generation with convergence detection
         max_scenarios = 100
         min_scenarios = 25
         convergence_threshold = 0.01  # 1% improvement threshold
-        
+
         lineups = []
         scores = []
         best_score = 0
         scenarios_without_improvement = 0
-        
+
         for scenario_idx in range(max_scenarios):
             # Generate single scenario
             scenario = self._generate_single_scenario()
-            
+
             if scenario_idx % 10 == 0:
                 print(f"Processing scenario {scenario_idx + 1}, best score so far: {best_score:.2f}")
-            
+
             lineup = self._optimize_single_scenario(scenario, constraints or {})
             if lineup:
                 score = self._get_lineup_score(lineup)
                 lineups.append(lineup)
                 scores.append(score)
-                
+
                 # Check for convergence
                 if score > best_score * (1 + convergence_threshold):
                     best_score = score
@@ -116,10 +116,10 @@ class LineupOptimizer:
                     print(f"New best score: {score:.2f} at scenario {scenario_idx + 1}")
                 else:
                     scenarios_without_improvement += 1
-                
+
                 # Early stopping if we've found enough good solutions
-                if (scenario_idx >= min_scenarios and 
-                    scenarios_without_improvement >= 15 and 
+                if (scenario_idx >= min_scenarios and
+                    scenarios_without_improvement >= 15 and
                     len(lineups) >= 5):
                     print(f"Converged after {scenario_idx + 1} scenarios (no improvement for 15 iterations)")
                     break
@@ -134,7 +134,7 @@ class LineupOptimizer:
         unique_scores = []
         seen_combinations = set()
 
-        for lineup, score in zip(lineups, scores):
+        for lineup, score in zip(lineups, scores, strict=False):
             players = frozenset(player["player_name"] for player in lineup.values())
             if players not in seen_combinations:
                 seen_combinations.add(players)
@@ -189,7 +189,7 @@ class LineupOptimizer:
 
         return scenario
 
-    def apply_strategy_adjustments(self, analysis_results: Dict):
+    def apply_strategy_adjustments(self, analysis_results: dict):
         """Apply strategy-based adjustments to player projections."""
         self.strategy_boost = {}
 
@@ -216,8 +216,8 @@ class LineupOptimizer:
                 )
 
     def _optimize_single_scenario(
-        self, scenario: pd.DataFrame, constraints: Dict
-    ) -> Optional[Dict]:
+        self, scenario: pd.DataFrame, constraints: dict
+    ) -> dict | None:
         """Optimize a single scenario with given constraints."""
         try:
             print("Starting scenario optimization...")
@@ -286,7 +286,7 @@ class LineupOptimizer:
             print(f"Error in optimization: {str(e)}")
             return None
 
-    def _validate_lineup(self, lineup: Dict) -> bool:
+    def _validate_lineup(self, lineup: dict) -> bool:
         """Validate that the lineup meets all basic requirements."""
         if not lineup:
             return False
@@ -323,7 +323,7 @@ class LineupOptimizer:
 
         return True
 
-    def _update_player_usage(self, lineup: Dict):
+    def _update_player_usage(self, lineup: dict):
         """Track player usage across lineups."""
         if not lineup:
             return
@@ -466,7 +466,7 @@ class LineupOptimizer:
 
     def _calculate_exposure_constraints(
         self, current_lineup_count: int, max_exposure: float
-    ) -> Dict:
+    ) -> dict:
         """Calculate exposure-based constraints for the next lineup."""
         constraints = {"avoid_players": []}
 
@@ -478,8 +478,8 @@ class LineupOptimizer:
         return constraints
 
     def _build_lineup_from_solution(
-        self, base_vars, flex_vars, players: List[Dict]
-    ) -> Dict:
+        self, base_vars, flex_vars, players: list[dict]
+    ) -> dict:
         """Convert optimization solution to a lineup dictionary."""
         lineup = {}
 
@@ -530,7 +530,7 @@ class LineupOptimizer:
         print(f"Built lineup with {len(lineup)} players")
         return lineup
 
-    def _get_lineup_score(self, lineup: Dict) -> float:
+    def _get_lineup_score(self, lineup: dict) -> float:
         """Calculate the total projected score for a lineup."""
         return sum(float(player["projected_points"]) for player in lineup.values())
 
@@ -541,7 +541,7 @@ class LineupOptimizer:
         count = self.player_usage.get(player_name, 0)
         return count / len(self.previous_lineups)
 
-    def get_lineup_correlation(self, lineup: Dict) -> float:
+    def get_lineup_correlation(self, lineup: dict) -> float:
         """Calculate the correlation score for a lineup."""
         team_counts = {}
         for player in lineup.values():

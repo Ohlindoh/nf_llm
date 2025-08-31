@@ -4,6 +4,7 @@ Script to explicitly create database tables.
 """
 import os
 import pathlib
+
 from sqlalchemy import create_engine, text
 
 # PostgreSQL is the only supported database now

@@ -1,6 +1,8 @@
 import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from nf_llm.models import Base
 
 DATABASE_URL = os.getenv("DATABASE_URL", "duckdb:////app/data/nf_llm.duckdb")

@@ -81,3 +81,8 @@ disallow_untyped_defs = true
 [tool.poetry.dependencies]
 duckdb = "^1.0"
 duckdb-engine = "^0.13"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.5",
+]

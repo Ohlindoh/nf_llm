@@ -1,12 +1,10 @@
 import sys
-from pathlib import Path
-import requests
-import pandas as pd
-from bs4 import BeautifulSoup
-from typing import Optional, Dict
 from io import StringIO
-import re
-import logging
+from pathlib import Path
+
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
@@ -17,7 +15,7 @@ POSITIONS = ["QB", "RB", "WR", "TE", "DST"]
 BASE_URL = "https://www.fantasypros.com/nfl/stats/{}.php?range=week&week={}"
 
 
-def get_column_mapping(position: str) -> Dict[str, str]:
+def get_column_mapping(position: str) -> dict[str, str]:
     if position == "QB":
         return {
             "ATT": "QB_PASS_ATT",
@@ -57,7 +55,7 @@ def get_column_mapping(position: str) -> Dict[str, str]:
     return {}
 
 
-def fetch_and_parse_data(position: str, week: int) -> Optional[pd.DataFrame]:
+def fetch_and_parse_data(position: str, week: int) -> pd.DataFrame | None:
     url = BASE_URL.format(position.lower(), week)
     try:
         response = requests.get(url)
@@ -85,7 +83,7 @@ def fetch_and_parse_data(position: str, week: int) -> Optional[pd.DataFrame]:
         return None
 
 
-def collect_player_stats(week: int) -> Dict[str, pd.DataFrame]:
+def collect_player_stats(week: int) -> dict[str, pd.DataFrame]:
     return {
         pos: fetch_and_parse_data(pos, week)
         for pos in POSITIONS

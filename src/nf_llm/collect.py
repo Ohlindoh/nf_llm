@@ -1,8 +1,7 @@
+import argparse
 import logging
 import os
 import sys
-import argparse
-from typing import Dict, Optional
 
 import pandas as pd
 
@@ -18,19 +17,18 @@ collectors_dir = os.path.join(current_dir, "collectors")
 sys.path.append(collectors_dir)
 
 # Import data collection functions
+from nf_llm.collectors.dk import collect_draftkings_data
 from nf_llm.collectors.fantasy_pros_projections import (
     collect_and_clean_fantasy_pros_data,
 )
-from nf_llm.collectors.dk import collect_draftkings_data
 from nf_llm.collectors.fantasy_pros_stats import collect_fantasy_pros_stats
-from nf_llm.collectors.utils import clean_player_name, clean_dst_name
-
+from nf_llm.collectors.utils import clean_dst_name, clean_player_name
 
 OUTPUT_DIR = "data"
 OUTPUT_FILE = "merged_fantasy_football_data.csv"
 
 
-def _normalise_df(raw: object) -> Optional[pd.DataFrame]:
+def _normalise_df(raw: object) -> pd.DataFrame | None:
     """Convert raw collector output into a cleaned ``DataFrame``.
 
     Several collectors return data in slightly different shapes (a DataFrame,
@@ -70,8 +68,8 @@ def _normalise_df(raw: object) -> Optional[pd.DataFrame]:
 
 
 def collect_all_data(
-    dk_contest_type: str, dk_draft_group_id: Optional[int] = None
-) -> Dict[str, pd.DataFrame]:
+    dk_contest_type: str, dk_draft_group_id: int | None = None
+) -> dict[str, pd.DataFrame]:
     """Collect data from all available sources."""
 
     data_sources = {
@@ -82,7 +80,7 @@ def collect_all_data(
         "player_stats": collect_fantasy_pros_stats,
     }
 
-    collected_data: Dict[str, pd.DataFrame] = {}
+    collected_data: dict[str, pd.DataFrame] = {}
     for source_name, collect_func in data_sources.items():
         logger.info(f"Collecting data from {source_name}")
         try:
@@ -98,7 +96,7 @@ def collect_all_data(
     return collected_data
 
 
-def merge_dataframes(dataframes: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+def merge_dataframes(dataframes: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """
     Merge all collected dataframes into a single dataframe, ensuring unique entries per player.
     Drop any rows with null values.
@@ -146,7 +144,7 @@ def save_data(data: pd.DataFrame, filename: str) -> None:
     logger.info(f"Data saved to {output_path}")
 
 
-def main(dk_contest_type: str, dk_draft_group_id: Optional[int] = None) -> None:
+def main(dk_contest_type: str, dk_draft_group_id: int | None = None) -> None:
     # Collect data from all sources
     collected_data = collect_all_data(dk_contest_type, dk_draft_group_id)
 

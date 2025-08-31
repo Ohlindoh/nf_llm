@@ -1,9 +1,9 @@
+import logging
+import traceback
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List
-import logging
-from logging import error
-import traceback
 
 from nf_llm.service import build_lineups
 
@@ -13,14 +13,14 @@ app = FastAPI(title="NF-LLM API", version="0.1.0")
 class LineupRequest(BaseModel):
     csv_path: str = Field(..., description="Path to player CSV")
     slate_id: str = Field(..., description="Contest or slate identifier")
-    constraints: Dict[str, Any] = Field(
+    constraints: dict[str, Any] = Field(
         default_factory=dict,
         description="Optimizer constraints (num_lineups, max_exposure, etc.)",
     )
 
 
 class LineupResponse(BaseModel):
-    lineups: List[Dict[str, Any]]
+    lineups: list[dict[str, Any]]
 
 
 class UndervaluedPlayersRequest(BaseModel):
@@ -29,7 +29,7 @@ class UndervaluedPlayersRequest(BaseModel):
 
 
 class UndervaluedPlayersResponse(BaseModel):
-    players: Dict[str, List[Dict[str, Any]]]
+    players: dict[str, list[dict[str, Any]]]
 
 
 @app.on_event("startup")

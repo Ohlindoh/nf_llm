@@ -4,9 +4,9 @@ Handles value analysis, stack analysis, and strategy generation.
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 
 
 @dataclass
@@ -23,7 +23,7 @@ class AnalysisSettings:
 class FantasyAnalyzer:
     """Analyzes fantasy football data for insights and strategy."""
 
-    def __init__(self, data: pd.DataFrame, settings: Optional[AnalysisSettings] = None):
+    def __init__(self, data: pd.DataFrame, settings: AnalysisSettings | None = None):
         self.data = data
         self.settings = settings or AnalysisSettings()
         self._validate_data()
@@ -48,7 +48,7 @@ class FantasyAnalyzer:
             self.data[col] = pd.to_numeric(self.data[col], errors="coerce")
 
     # analysis.py
-    def analyze_all(self) -> Dict:
+    def analyze_all(self) -> dict:
         """Run all analyses and return compiled results."""
         try:
             results = {"value_plays": {}, "stacks": [], "inefficiencies": {}}
@@ -80,7 +80,7 @@ class FantasyAnalyzer:
             return {"value_plays": {}, "stacks": [], "inefficiencies": {}}
 
     # analysis.py
-    def analyze_value_plays(self) -> Dict[str, List[Dict]]:
+    def analyze_value_plays(self) -> dict[str, list[dict]]:
         """Identify value plays by position."""
         value_plays = {}
 
@@ -112,7 +112,7 @@ class FantasyAnalyzer:
 
         return value_plays
 
-    def analyze_stacks(self) -> List[Dict]:
+    def analyze_stacks(self) -> list[dict]:
         """Identify optimal stacking opportunities."""
         qb_data = self.data[self.data["player_position_id"] == "QB"]
         receiver_data = self.data[self.data["player_position_id"].isin(["WR", "TE"])]
@@ -153,7 +153,7 @@ class FantasyAnalyzer:
             : self.settings.TOP_N_RESULTS
         ]
 
-    def analyze_market_inefficiencies(self) -> Dict[str, pd.DataFrame]:
+    def analyze_market_inefficiencies(self) -> dict[str, pd.DataFrame]:
         """Identify market inefficiencies by position."""
         inefficiencies = {}
 
@@ -193,7 +193,7 @@ class FantasyAnalyzer:
 
         return inefficiencies
 
-    def generate_lineup_strategy(self, analysis_results: Optional[Dict] = None) -> str:
+    def generate_lineup_strategy(self, analysis_results: dict | None = None) -> str:
         """Generate strategic insights and recommendations."""
         if analysis_results is None:
             analysis_results = self.analyze_all()
@@ -241,7 +241,7 @@ class FantasyAnalyzer:
 
         return "\n".join(insights)
 
-    def get_player_analysis(self, player_name: str) -> Dict:
+    def get_player_analysis(self, player_name: str) -> dict:
         """Get detailed analysis for a specific player."""
         player_data = self.data[self.data["player_name"] == player_name]
         if player_data.empty:

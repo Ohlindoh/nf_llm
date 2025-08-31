@@ -3,12 +3,11 @@ Data module for fantasy football lineup generator.
 Handles data loading, preprocessing, and validation.
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
-import pandas as pd
-import numpy as np
-from pathlib import Path
 import logging
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import pandas as pd
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 class DataConfig:
     """Configuration for data processing."""
 
-    REQUIRED_COLUMNS: Set[str] = field(
+    REQUIRED_COLUMNS: set[str] = field(
         default_factory=lambda: {
             "player_name",
             "player_position_id",
@@ -29,12 +28,12 @@ class DataConfig:
             "rank_ecr",
         }
     )
-    VALID_POSITIONS: Set[str] = field(
+    VALID_POSITIONS: set[str] = field(
         default_factory=lambda: {"QB", "RB", "WR", "TE", "DST"}
     )
     MIN_SALARY: int = 2000
     MAX_SALARY: int = 15000
-    MIN_PLAYERS_PER_POSITION: Dict[str, int] = field(
+    MIN_PLAYERS_PER_POSITION: dict[str, int] = field(
         default_factory=lambda: {"QB": 10, "RB": 20, "WR": 20, "TE": 10, "DST": 8}
     )
 
@@ -42,7 +41,7 @@ class DataConfig:
 class FantasyDataManager:
     """Manages fantasy football data loading and preprocessing."""
 
-    def __init__(self, config: Optional[DataConfig] = None):
+    def __init__(self, config: DataConfig | None = None):
         self.config = config or DataConfig()
         self.data = None
         self.validation_errors = []
@@ -79,7 +78,7 @@ class FantasyDataManager:
 
             # Convert salary and points to numeric
             self.data["salary"] = pd.to_numeric(
-                self.data["salary"].replace("[\$,]", "", regex=True), errors="coerce"
+                self.data["salary"].replace(r"[\$,]", "", regex=True), errors="coerce"
             )
             self.data["projected_points"] = pd.to_numeric(
                 self.data["projected_points"], errors="coerce"
@@ -148,7 +147,7 @@ class FantasyDataManager:
             raise ValueError(f"Invalid position: {position}")
         return self.data[self.data["player_position_id"] == position].copy()
 
-    def get_player_data(self, player_name: str) -> Optional[pd.Series]:
+    def get_player_data(self, player_name: str) -> pd.Series | None:
         """Get data for a specific player."""
         player_data = self.data[
             self.data["player_name"] == player_name.lower().replace(" ", "")
@@ -163,7 +162,7 @@ class FantasyDataManager:
         """Get players exceeding the value threshold."""
         return self.data[self.data["value"] > threshold].copy()
 
-    def get_salary_range(self, position: str) -> Dict[str, float]:
+    def get_salary_range(self, position: str) -> dict[str, float]:
         """Get salary statistics for a position."""
         pos_data = self.get_position_data(position)
         return {
@@ -220,7 +219,7 @@ class FantasyDataManager:
         else:
             logger.error("No data to save")
 
-    def get_data_summary(self) -> Dict:
+    def get_data_summary(self) -> dict:
         """Get summary statistics of the data."""
         if self.data is None:
             return {}

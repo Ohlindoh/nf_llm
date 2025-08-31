@@ -4,7 +4,6 @@ Central configuration for fantasy football application.
 
 import os
 from dataclasses import dataclass, field
-from typing import Dict, Set
 
 
 @dataclass
@@ -29,7 +28,7 @@ class Config:
     DEFAULT_MAX_EXPOSURE: float = 0.3
 
     # Position Settings - Using field(default_factory=lambda) for mutable defaults
-    ROSTER_POSITIONS: Dict[str, int] = field(
+    ROSTER_POSITIONS: dict[str, int] = field(
         default_factory=lambda: {
             "QB": 1,
             "RB": 2,
@@ -40,7 +39,7 @@ class Config:
         }
     )
 
-    FLEX_POSITIONS: Set[str] = field(default_factory=lambda: {"RB", "WR", "TE"})
+    FLEX_POSITIONS: set[str] = field(default_factory=lambda: {"RB", "WR", "TE"})
 
     # Analysis Settings
     VALUE_THRESHOLD: float = 2.0
@@ -68,7 +67,7 @@ class Config:
         return os.path.join(self.DATA_DIR, self.DATA_FILE)
 
     @property
-    def llm_config(self) -> Dict:
+    def llm_config(self) -> dict:
         """Get LLM configuration dict."""
         return {
             "config_list": [

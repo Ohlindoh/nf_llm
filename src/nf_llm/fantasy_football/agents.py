@@ -3,10 +3,10 @@ Agent module for fantasy football lineup generation.
 Handles LLM-based user input interpretation and strategy generation.
 """
 
-import os
-from typing import Dict, Optional, List
 import json
+import os
 from dataclasses import dataclass
+
 from autogen import AssistantAgent, UserProxyAgent
 
 
@@ -16,7 +16,7 @@ class AgentConfig:
 
     model: str = "gpt-4"
     temperature: float = 0.0
-    api_key: Optional[str] = None
+    api_key: str | None = None
 
     def __post_init__(self):
         self.api_key = self.api_key or os.environ.get("OPENAI_API_KEY")
@@ -24,7 +24,7 @@ class AgentConfig:
             raise ValueError("OpenAI API key not found in environment variables")
 
     @property
-    def llm_config(self) -> Dict:
+    def llm_config(self) -> dict:
         return {
             "config_list": [
                 {
@@ -39,7 +39,7 @@ class AgentConfig:
 class FantasyAgentSystem:
     """Manages LLM agents for fantasy football lineup generation."""
 
-    def __init__(self, config: Optional[AgentConfig] = None):
+    def __init__(self, config: AgentConfig | None = None):
         self.config = config or AgentConfig()
         self._initialize_agents()
 
@@ -101,7 +101,7 @@ class FantasyAgentSystem:
             llm_config=self.config.llm_config,
         )
 
-    def process_user_input(self, user_input: str) -> Dict:
+    def process_user_input(self, user_input: str) -> dict:
         """Process natural language user input into structured constraints."""
         if not user_input.strip():
             return {}
@@ -129,7 +129,7 @@ class FantasyAgentSystem:
             print(f"Error processing user input: {str(e)}")
             return {}
 
-    def _clean_constraints(self, constraints: Dict) -> Dict:
+    def _clean_constraints(self, constraints: dict) -> dict:
         """Clean and validate constraint values."""
         cleaned = {}
 
@@ -180,7 +180,7 @@ class FantasyAgentSystem:
             print(f"Error generating strategy insights: {str(e)}")
             return "Could not generate strategy insights."
 
-    def validate_lineup(self, lineup: Dict, user_input: str) -> bool:
+    def validate_lineup(self, lineup: dict, user_input: str) -> bool:
         """Validate if a lineup meets user-specified constraints."""
         constraints = self.process_user_input(user_input)
 
@@ -200,7 +200,7 @@ class FantasyAgentSystem:
 
         return True
 
-    def explain_lineup(self, lineup: Dict, analysis_results: Dict) -> str:
+    def explain_lineup(self, lineup: dict, analysis_results: dict) -> str:
         """Generate natural language explanation of lineup choices."""
         try:
             explanation_prompt = self._build_explanation_prompt(
@@ -217,7 +217,7 @@ class FantasyAgentSystem:
             print(f"Error generating lineup explanation: {str(e)}")
             return "Could not generate lineup explanation."
 
-    def _build_explanation_prompt(self, lineup: Dict, analysis_results: Dict) -> str:
+    def _build_explanation_prompt(self, lineup: dict, analysis_results: dict) -> str:
         """Build prompt for lineup explanation."""
         prompt_parts = [
             "Explain the following lineup choices considering value, stacks, and strategy:\n\n"
