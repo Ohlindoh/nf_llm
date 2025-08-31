@@ -27,16 +27,17 @@ dependencies = [
     "lxml",
     "ipywidgets",
     "streamlit",
-    "requests",
-    "typer",
-    "psycopg2-binary",
-    "sqlalchemy",
-    "fastapi>=0.110,<1.0",
-    "uvicorn[standard]>=0.25,<1.0",
-    "pydantic>=2.6,<3.0",
-    "duckdb>=1.0",
-    "duckdb-engine>=0.13",
-]
+      "requests",
+      "typer",
+      "psycopg2-binary",
+      "sqlalchemy",
+      "fastapi>=0.110,<1.0",
+      "uvicorn[standard]>=0.25,<1.0",
+      "pydantic>=2.6,<3.0",
+      "duckdb>=1.0",
+      "duckdb-engine>=0.13",
+      "espn-api",
+  ]
 
 [project.optional-dependencies]
 dev = [
