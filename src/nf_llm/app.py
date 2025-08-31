@@ -14,13 +14,13 @@ if not os.getenv("OPENAI_API_KEY") and _secret_path.exists():
 
 # Initialize LLM configuration
 llm_config = {
-    "model": "gpt-4",
+    "model": "gpt-5-mini",
     "api_key": os.environ.get("OPENAI_API_KEY"),
     "temperature": 0,
 }
 
 # API configuration - use environment variable or default to localhost
-API_ROOT = os.getenv("API_URL", "http://localhost:8000")
+API_ROOT = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 
 def get_undervalued_players(top_n=5):

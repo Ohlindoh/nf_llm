@@ -34,7 +34,6 @@ class UndervaluedPlayersResponse(BaseModel):
 
 @app.on_event("startup")
 def on_startup():
-    # Database initialization - remove if not needed
     pass
 
 
