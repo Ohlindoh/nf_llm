@@ -146,6 +146,63 @@ def display_lineup(lineup):
 def create_fantasy_football_ui():
     st.title("Daily Fantasy Football Lineup Generator")
 
+    st.header("Weekly Plan (ESPN)")
+    with st.form("espn_weekly_plan"):
+        league_id = st.text_input("League ID")
+        year = st.number_input("Season Year", min_value=2000, max_value=2100, value=2024)
+        espn_s2 = st.text_input("ESPN S2")
+        swid = st.text_input("SWID")
+        preferences_text = st.text_input("Preferences (optional)")
+        max_acquisitions = st.number_input("Max acquisitions", min_value=1, value=2)
+        positions_to_fill = st.text_input("Positions to fill (comma-separated)")
+        plan_submit = st.form_submit_button("Compute Weekly Plan")
+    if plan_submit:
+        payload = {
+            "league_id": league_id,
+            "year": int(year),
+            "espn_s2": espn_s2,
+            "swid": swid,
+            "max_acquisitions": int(max_acquisitions),
+        }
+        if preferences_text:
+            payload["preferences_text"] = preferences_text
+        if positions_to_fill:
+            payload["positions_to_fill"] = [
+                p.strip() for p in positions_to_fill.split(",") if p.strip()
+            ]
+        try:
+            r = httpx.post(
+                f"{API_ROOT}/espn/weekly_plan", json=payload, timeout=60
+            )
+            if r.status_code != 200:
+                st.error(f"API returned {r.status_code}: {r.text}")
+            else:
+                weekly_plan = r.json()
+                tab_start, tab_add = st.tabs(["Start/Sit", "Add/Claim"])
+                with tab_start:
+                    starters = weekly_plan.get("start_sit", {}).get("starters", {})
+                    if starters:
+                        st.table(pd.DataFrame(starters).T)
+                    bench = weekly_plan.get("start_sit", {}).get("bench", [])
+                    if bench:
+                        st.subheader("Bench")
+                        st.table(pd.DataFrame(bench))
+                    deltas = weekly_plan.get("start_sit", {}).get("deltas", {})
+                    if deltas:
+                        st.subheader("Deltas")
+                        st.json(deltas)
+                with tab_add:
+                    acquisitions = weekly_plan.get("acquisitions", [])
+                    if acquisitions:
+                        st.table(pd.DataFrame(acquisitions))
+                    else:
+                        st.write("No acquisition suggestions.")
+                notes = weekly_plan.get("notes", [])
+                if notes:
+                    st.info("\n".join(notes))
+        except Exception as e:
+            st.error(f"Error calling API: {e}")
+
     # Add a collapsible section for undervalued players
     with st.expander("View Most Undervalued Players", expanded=False):
         st.subheader("Most Undervalued Players")

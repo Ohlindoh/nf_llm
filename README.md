@@ -14,6 +14,12 @@ Install dependencies:
 uv sync
 ```
 
+The weekly plan feature depends on the community `espn-api` package. If it's not
+present, install it with:
+```bash
+uv add espn-api
+```
+
 ## Usage
 
 **Collect data:**
@@ -27,6 +33,14 @@ docker-compose up --build
 ```
 
 Access the UI at http://localhost:8501
+
+### Weekly Plan (ESPN)
+
+1. Open the app in your browser.
+2. Locate the **Weekly Plan (ESPN)** panel.
+3. Enter your `league_id`, `year`, `espn_s2`, and `swid` cookies.
+4. Optionally provide natural language preferences, a maximum number of acquisitions, or a comma-separated list of positions to fill.
+5. Click **Compute Weekly Plan** to call the stateless `POST /espn/weekly_plan` API and view start/sit recommendations and suggested waiver pickups.
 
 ## Development
 
