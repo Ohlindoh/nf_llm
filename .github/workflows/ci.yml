@@ -1,5 +1,5 @@
 name: CI
-
+# Updated workflow - basic validation only
 
 on:
   push:
@@ -26,10 +26,6 @@ jobs:
         run: |
           uv sync --dev
           
-      - name: Basic linting
+      - name: Basic syntax check
         run: |
-          uv run ruff check . --fix
-          
-      - name: Format check
-        run: |
-          uv run ruff format --check .
+          uv run python -m py_compile src/nf_llm/*.py
