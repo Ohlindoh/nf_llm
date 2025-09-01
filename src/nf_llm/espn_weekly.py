@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 
 try:  # pragma: no cover - optional dependency
     from espn_api.football import League  # type: ignore
@@ -28,7 +29,7 @@ def main() -> None:
         raise ImportError("espn-api package is required to fetch ESPN data")
 
     league_id = int(_env("LEAGUE_ID"))
-    year = int(_env("LEAGUE_YEAR"))
+    year = datetime.now().year
     swid = _env("SWID")
     espn_s2 = _env("ESPN_S2")
 

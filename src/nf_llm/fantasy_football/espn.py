@@ -9,15 +9,26 @@ except Exception:  # pragma: no cover - handled at runtime
     League = None  # type: ignore
 
 
-def _normalise_id(identifier: str) -> str:
+def _normalise_id(identifier: str | dict) -> str:
     """Return an ESPN identifier in normalised form.
 
     IDs returned by the API may include surrounding braces or differ in case.  By
     stripping the braces and lowering the case we can compare identifiers
     reliably.
+    
+    Parameters
+    ----------
+    identifier: str | dict
+        Either a string SWID or a dict containing owner information with SWID.
     """
-
-    return identifier.strip("{}").lower()
+    if isinstance(identifier, dict):
+        # Extract SWID from owner dict - try common keys
+        swid = identifier.get('swid') or identifier.get('SWID') or identifier.get('id', '')
+        if isinstance(swid, str):
+            return swid.strip("{}").lower()
+        return str(swid).strip("{}").lower()
+    
+    return str(identifier).strip("{}").lower()
 
 
 def _find_user_team(league: Any, swid: str) -> Any:
@@ -31,11 +42,10 @@ def _find_user_team(league: Any, swid: str) -> Any:
 
     normalised = _normalise_id(swid)
     for team in getattr(league, "teams", []):
-        owners = [
-            _normalise_id(o) for o in getattr(team, "owners", []) or []
-        ]
-        if normalised in owners:
-            return team
+        owners = getattr(team, "owners", []) or []
+        for owner in owners:
+            if _normalise_id(owner) == normalised:
+                return team
 
     # Fallback to the team detected by the library if no owner match is found.
     team_id = getattr(league, "team_id", None)
