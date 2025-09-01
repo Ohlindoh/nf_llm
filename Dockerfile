@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.12-slim
+FROM python:3.12-slim as base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -30,10 +30,16 @@ COPY pyproject.toml uv.lock ./
 # Install dependencies
 RUN uv sync --frozen --no-install-project
 
-# Copy source code
+# Development stage - fast rebuilds, no user switching
+FROM base as dev
 COPY . .
+RUN uv sync --frozen
+EXPOSE 8000 8501
+CMD ["uv", "run", "python", "-c", "print('Dev container ready. Use docker-compose to run specific services.')"]
 
-# Install the project
+# Production stage - includes security hardening
+FROM base as production
+COPY . .
 RUN uv sync --frozen
 
 # Create non-root user for security
@@ -41,8 +47,5 @@ RUN useradd --create-home --shell /bin/bash app \
     && chown -R app:app /app
 USER app
 
-# Expose ports
 EXPOSE 8000 8501
-
-# Default command
 CMD ["uv", "run", "python", "-c", "print('Container ready. Use docker-compose to run specific services.')"]

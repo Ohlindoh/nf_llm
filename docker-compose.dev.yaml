@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  api:
+    # Skip build entirely - use existing image or build once
+    build: 
+      context: .
+      target: dev  # We'll add a dev stage to Dockerfile
+    volumes:
+      - ./src:/app/src:cached  # Mount source code directly
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./uv.lock:/app/uv.lock:ro
+      - duckdata:/app/data
+    environment:
+      - DATABASE_URL=duckdb:////app/data/nf_llm.duckdb
+      - PYTHONPATH=/app/src
+      - WATCHFILES_FORCE_POLLING=true  # Better file watching on Windows
+    command: >
+      uv run uvicorn nf_llm.api.main:app 
+      --host 0.0.0.0 
+      --port 8000 
+      --reload
+      --reload-dir /app/src
+
+  ui:
+    build: 
+      context: .
+      target: dev
+    volumes:
+      - ./src:/app/src:cached  # Mount source code directly
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./uv.lock:/app/uv.lock:ro
+      - duckdata:/app/data
+    environment:
+      - API_BASE_URL=http://api:8000
+      - PYTHONPATH=/app/src
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - STREAMLIT_SERVER_RUNONCAVE=true
+    command: >
+      uv run streamlit run src/nf_llm/app.py 
+      --server.port 8501 
+      --server.address 0.0.0.0
+      --server.enableCORS false
+      --server.enableXsrfProtection false
+      --server.fileWatcherType poll
