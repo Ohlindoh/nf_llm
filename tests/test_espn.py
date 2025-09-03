@@ -69,23 +69,43 @@ def test_get_user_team_handles_comanager():
 
 
 def test_recommend_lineup_selects_best_players():
-    qb1 = Mock(); qb1.position = "QB"; qb1.name = "QB1"; qb1.projected_points = 15
-    qb2 = Mock(); qb2.position = "QB"; qb2.name = "QB2"; qb2.projected_points = 10
-    rb1 = Mock(); rb1.position = "RB"; rb1.name = "RB1"; rb1.projected_points = 12
-    rb2 = Mock(); rb2.position = "RB"; rb2.name = "RB2"; rb2.projected_points = 8
-    wr1 = Mock(); wr1.position = "WR"; wr1.name = "WR1"; wr1.projected_points = 9
-    wr2 = Mock(); wr2.position = "WR"; wr2.name = "WR2"; wr2.projected_points = 7
-    wr3 = Mock(); wr3.position = "WR"; wr3.name = "WR3"; wr3.projected_points = 6
-    te1 = Mock(); te1.position = "TE"; te1.name = "TE1"; te1.projected_points = 5
-    dst = Mock(); dst.position = "DST"; dst.name = "DST"; dst.projected_points = 4
+    def make_player(pos, name, pts):
+        p = Mock()
+        p.position = pos
+        p.name = name
+        p.projected_points = pts
+        return p
+
+    qb1 = make_player("QB", "QB1", 15)
+    qb2 = make_player("QB", "QB2", 10)
+    rb1 = make_player("RB", "RB1", 12)
+    rb2 = make_player("RB", "RB2", 8)
+    wr1 = make_player("WR", "WR1", 9)
+    wr2 = make_player("WR", "WR2", 7)
+    wr3 = make_player("WR", "WR3", 6)
+    te1 = make_player("TE", "TE1", 5)
+    dst = make_player("DST", "DST", 4)
 
     team = Mock()
     team.roster = [qb1, qb2, rb1, rb2, wr1, wr2, wr3, te1, dst]
 
-    lineup = recommend_lineup(team)
+    settings = Mock()
+    settings.roster_positions = [
+        {"position": "QB", "count": 1},
+        {"position": "RB", "count": 2},
+        {"position": "WR", "count": 2},
+        {"position": "TE", "count": 1},
+        {"position": "RB/WR/TE", "count": 1},
+        {"position": "DST", "count": 1},
+    ]
+    league = Mock()
+    league.settings = settings
+
+    lineup = recommend_lineup(team, league)
     assert lineup["QB"][0]["name"] == "QB1"
     assert len(lineup["RB"]) == 2
-    assert len(lineup["WR"]) == 3
+    assert len(lineup["WR"]) == 2
+    assert len(lineup["FLEX"]) == 1
     assert lineup["TE"][0]["name"] == "TE1"
     assert lineup["DST"][0]["name"] == "DST"
 

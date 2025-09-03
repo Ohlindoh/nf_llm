@@ -1,7 +1,7 @@
 """Utilities for retrieving ESPN fantasy football data."""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple, Set
 
 try:  # pragma: no cover - import guard for optional dependency
     from espn_api.football import League  # type: ignore
@@ -37,13 +37,19 @@ def _find_user_team(league: Any, swid: str) -> Any:
     The espn-api library sets ``league.team_id`` only for primary managers.  When
     the user is a co-manager the library falls back to the first team in the
     league.  To ensure the correct team is returned we scan each team's owners
-    for the provided ``swid``.
+    for the provided ``swid``.  Some test doubles may not provide an iterable
+    ``owners`` attribute; in that case we simply treat the team as having no
+    owners rather than raising ``TypeError``.
     """
 
     normalised = _normalise_id(swid)
     for team in getattr(league, "teams", []):
         owners = getattr(team, "owners", []) or []
-        for owner in owners:
+        try:
+            owner_iter = list(owners)
+        except TypeError:
+            owner_iter = []
+        for owner in owner_iter:
             if _normalise_id(owner) == normalised:
                 return team
 
@@ -82,24 +88,72 @@ def get_user_team(league_id: int, year: int, swid: str, espn_s2: str) -> List[Di
     return roster
 
 
-def recommend_lineup(team: Any) -> Dict[str, List[Dict[str, Any]]]:
-    """Suggest a starting lineup based on projected points.
+def _lineup_slots(league: Any | None) -> Tuple[Dict[str, int], Dict[str, Set[str]]]:
+    """Return lineup slot counts and flex rules for ``league``.
 
-    Parameters
-    ----------
-    team: Any
-        Team object returned by ``espn-api``.
-
-    Returns
-    -------
-    dict
-        Mapping of lineup slot to selected player dictionaries.  Only a simple
-        heuristic is used: the highest ``projected_points`` players are chosen
-        for each position with a single FLEX spot (RB/WR/TE).
+    The espn-api exposes roster settings describing how many players are allowed
+    at each slot.  The structure of this data can vary slightly so the helper is
+    defensive and falls back to a sensible default when the information is
+    missing.
     """
 
-    slots = {"QB": 1, "RB": 2, "WR": 3, "TE": 1, "DST": 1, "FLEX": 1}
-    flex_positions = {"RB", "WR", "TE"}
+    if league is None:
+        return (
+            {"QB": 1, "RB": 2, "WR": 2, "TE": 1, "DST": 1, "FLEX": 1},
+            {"FLEX": {"RB", "WR", "TE"}},
+        )
+
+    settings = getattr(league, "settings", None)
+    roster_positions = getattr(settings, "roster_positions", []) if settings else []
+
+    slots: Dict[str, int] = {}
+    flex: Dict[str, Set[str]] = {}
+
+    for item in roster_positions:
+        if isinstance(item, dict):
+            name = str(
+                item.get("position")
+                or item.get("slot")
+                or item.get("name")
+                or ""
+            ).upper()
+            count = int(item.get("count", item.get("num", 0)))
+        else:
+            name = str(
+                getattr(item, "position", getattr(item, "slot", getattr(item, "name", "")))
+            ).upper()
+            count = int(getattr(item, "count", getattr(item, "num", 0)))
+
+        if count <= 0 or name in {"BE", "BN", "BENCH", "IR"}:
+            continue
+
+        if "/" in name:
+            allowed = {p.strip().upper() for p in name.split("/")}
+            slot_name = "OP" if allowed == {"QB", "RB", "WR", "TE"} else "FLEX"
+            slots[slot_name] = slots.get(slot_name, 0) + count
+            flex[slot_name] = flex.get(slot_name, allowed)
+        elif name == "OP":
+            slots["OP"] = slots.get("OP", 0) + count
+            flex["OP"] = {"QB", "RB", "WR", "TE"}
+        else:
+            if name in {"D/ST", "DST"}:
+                name = "DST"
+            slots[name] = slots.get(name, 0) + count
+
+    if "FLEX" in slots and "FLEX" not in flex:
+        flex["FLEX"] = {"RB", "WR", "TE"}
+
+    return slots, flex
+
+
+def recommend_lineup(team: Any, league: Any | None = None) -> Dict[str, List[Dict[str, Any]]]:
+    """Suggest a starting lineup based on projected points.
+
+    ``league`` may be provided to determine the roster configuration; if absent
+    a standard configuration with a single FLEX spot is used.
+    """
+
+    slots, flex_rules = _lineup_slots(league)
     lineup: Dict[str, List[Dict[str, Any]]] = {slot: [] for slot in slots}
 
     players = sorted(
@@ -118,14 +172,18 @@ def recommend_lineup(team: Any) -> Dict[str, List[Dict[str, Any]]]:
                     "projected_points": getattr(player, "projected_points", 0),
                 }
             )
-        elif pos in flex_positions and len(lineup["FLEX"]) < slots["FLEX"]:
-            lineup["FLEX"].append(
-                {
-                    "name": getattr(player, "name", ""),
-                    "position": pos,
-                    "projected_points": getattr(player, "projected_points", 0),
-                }
-            )
+            continue
+
+        for flex_slot, allowed in flex_rules.items():
+            if pos in allowed and len(lineup[flex_slot]) < slots[flex_slot]:
+                lineup[flex_slot].append(
+                    {
+                        "name": getattr(player, "name", ""),
+                        "position": pos,
+                        "projected_points": getattr(player, "projected_points", 0),
+                    }
+                )
+                break
 
     return lineup
 

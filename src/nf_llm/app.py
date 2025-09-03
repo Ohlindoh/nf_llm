@@ -381,16 +381,48 @@ def create_espn_team_ui():
 
     if st.button("Load Team"):
         try:
-            from nf_llm.fantasy_football.espn import get_user_team
             import datetime
-            
-            current_year = datetime.datetime.now().year
+            from espn_api.football import League
+            from nf_llm.fantasy_football.espn import (
+                _find_user_team,
+                recommend_lineup,
+                suggest_free_agents,
+            )
 
-            roster = get_user_team(int(league_id), current_year, swid, espn_s2)
+            current_year = datetime.datetime.now().year
+            league = League(
+                league_id=int(league_id),
+                year=current_year,
+                swid=swid,
+                espn_s2=espn_s2,
+            )
+            team = _find_user_team(league, swid)
+            if team is None:
+                st.error("Could not determine team for provided credentials")
+                return
+
+            roster = [
+                {
+                    "name": getattr(p, "name", ""),
+                    "position": getattr(p, "position", ""),
+                    "proTeam": getattr(p, "proTeam", ""),
+                }
+                for p in getattr(team, "roster", [])
+            ]
+
+            st.subheader("Roster")
             if roster:
                 st.dataframe(pd.DataFrame(roster))
             else:
                 st.info("No players found for this team.")
+
+            lineup = recommend_lineup(team, league)
+            st.subheader("Suggested Lineup")
+            st.json(lineup)
+
+            suggestions = suggest_free_agents(league, team)
+            st.subheader("Free Agent Suggestions")
+            st.json(suggestions)
         except Exception as e:  # pragma: no cover - UI feedback only
             st.error(f"Failed to load team: {e}")
 
