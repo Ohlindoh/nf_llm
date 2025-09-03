@@ -46,7 +46,7 @@ def main() -> None:
         print(f"{pos:>3}  {name:<25} {proj:5.1f}")
 
     print("\n== Suggested Lineup ==")
-    lineup = recommend_lineup(team)
+    lineup = recommend_lineup(team, league)
     for slot, players in lineup.items():
         for p in players:
             print(f"{slot:>5}: {p['name']} ({p['position']}) {p['projected_points']:.1f}")
