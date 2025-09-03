@@ -9,12 +9,8 @@ try:  # pragma: no cover - optional dependency
 except Exception:  # pragma: no cover - handled at runtime
     League = None  # type: ignore
 
-from .fantasy_football.espn import (
-    _find_user_team,
-    get_matchup,
-    recommend_lineup,
-    suggest_free_agents,
-)
+from .fantasy_football.espn import _find_user_team, get_matchup
+from .fantasy_football.espn_optimizer import build_optimal_lineup
 
 
 def _env(name: str, default: str | None = None) -> str:
@@ -46,8 +42,8 @@ def main() -> None:
         print(f"{pos:>3}  {name:<25} {proj:5.1f}")
 
     print("\n== Suggested Lineup ==")
-    lineup = recommend_lineup(team, league)
-    for slot, players in lineup.items():
+    result = build_optimal_lineup(team, league)
+    for slot, players in result["lineup"].items():
         for p in players:
             print(f"{slot:>5}: {p['name']} ({p['position']}) {p['projected_points']:.1f}")
 
@@ -57,10 +53,12 @@ def main() -> None:
         print(f"Vs. {getattr(opp, 'team_name', 'Unknown')}")
 
     print("\n== Free Agent Suggestions ==")
-    for fa in suggest_free_agents(league, team):
-        print(
-            f"{fa['position']:>3}  {fa['name']:<25} {fa['projected_points']:.1f}"
-        )
+    for pickup in result["pickups"]:
+        name = pickup["add"]
+        pos = pickup["position"]
+        gain = pickup["projected_points_gain"]
+        drop = pickup["drop"] or "FA"
+        print(f"{pos:>3}  {name:<25} +{gain:.1f} over {drop}")
 
 
 if __name__ == "__main__":  # pragma: no cover - script entry point

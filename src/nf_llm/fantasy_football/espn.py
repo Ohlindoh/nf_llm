@@ -146,6 +146,17 @@ def _lineup_slots(league: Any | None) -> Tuple[Dict[str, int], Dict[str, Set[str
     return slots, flex
 
 
+def lineup_slots(league: Any | None = None) -> Tuple[Dict[str, int], Dict[str, Set[str]]]:
+    """Public wrapper returning lineup slot counts and flex rules.
+
+    This function exposes the slot calculation logic so that other modules can
+    reason about roster construction without relying on the internal
+    ``_lineup_slots`` helper directly.
+    """
+
+    return _lineup_slots(league)
+
+
 def recommend_lineup(team: Any, league: Any | None = None) -> Dict[str, List[Dict[str, Any]]]:
     """Suggest a starting lineup based on projected points.
 
@@ -153,7 +164,7 @@ def recommend_lineup(team: Any, league: Any | None = None) -> Dict[str, List[Dic
     a standard configuration with a single FLEX spot is used.
     """
 
-    slots, flex_rules = _lineup_slots(league)
+    slots, flex_rules = lineup_slots(league)
     lineup: Dict[str, List[Dict[str, Any]]] = {slot: [] for slot in slots}
 
     players = sorted(

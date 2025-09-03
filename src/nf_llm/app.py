@@ -383,11 +383,8 @@ def create_espn_team_ui():
         try:
             import datetime
             from espn_api.football import League
-            from nf_llm.fantasy_football.espn import (
-                _find_user_team,
-                recommend_lineup,
-                suggest_free_agents,
-            )
+            from nf_llm.fantasy_football.espn import _find_user_team
+            from nf_llm.fantasy_football.espn_optimizer import build_optimal_lineup
 
             current_year = datetime.datetime.now().year
             league = League(
@@ -416,13 +413,15 @@ def create_espn_team_ui():
             else:
                 st.info("No players found for this team.")
 
-            lineup = recommend_lineup(team, league)
-            st.subheader("Suggested Lineup")
-            st.json(lineup)
+            result = build_optimal_lineup(team, league)
+            st.subheader("Optimal Lineup")
+            st.json(result["lineup"])
 
-            suggestions = suggest_free_agents(league, team)
-            st.subheader("Free Agent Suggestions")
-            st.json(suggestions)
+            st.subheader("Suggested Pickups")
+            if result["pickups"]:
+                st.json(result["pickups"])
+            else:
+                st.info("No significant pickups found.")
         except Exception as e:  # pragma: no cover - UI feedback only
             st.error(f"Failed to load team: {e}")
 
