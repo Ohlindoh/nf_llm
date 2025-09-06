@@ -325,9 +325,51 @@ def show_optimizer_tab():
 
 
 def show_lineups_tab():
-    """Display the Lineups tab with saved lineups."""
-    st.header("Saved Lineups")
-    st.info("This section will display your saved lineups. Feature coming soon.")
+    """Display queued lineups and allow DraftKings CSV export."""
+    st.header("DraftKings Export")
+
+    salaries_dir = pathlib.Path(os.getenv("DK_SALARIES_DIR", "data/raw/dk_salaries"))
+    slate_options = sorted(p.stem.replace("_raw", "") for p in salaries_dir.glob("*_raw.csv"))
+    if slate_options:
+        slate_id = st.selectbox("Slate", slate_options)
+    else:
+        slate_id = st.text_input("Slate ID")
+
+    lineups = st.session_state.get("dk_lineups", [])
+    if not lineups:
+        st.info("No lineups queued for export.")
+        return
+
+    headers = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
+    df = pd.DataFrame(lineups, columns=headers)
+    st.table(df)
+
+    if st.button("Download DraftKings CSV"):
+        payload = {"slate_id": slate_id, "lineups": lineups}
+        try:
+            r = httpx.post(f"{API_ROOT}/export/dk_csv", json=payload, timeout=60)
+        except Exception as err:  # pragma: no cover - network failures
+            st.error(f"API request failed: {err}")
+            return
+
+        if r.status_code != 200:
+            st.error(f"API returned {r.status_code}: {r.text}")
+            return
+
+        invalid_header = r.headers.get("X-Invalid-Lineups", "")
+        invalid_indices = [i for i in invalid_header.split(",") if i]
+        invalid_count = len(invalid_indices)
+        valid_count = len(lineups) - invalid_count
+
+        st.download_button(
+            "Download DK CSV",
+            data=r.text,
+            file_name="dk_lineups.csv",
+            mime="text/csv",
+        )
+        st.caption(
+            f"{valid_count}/{len(lineups)} lineups valid; {invalid_count} rejected (bad IDs)."
+        )
 
 
 def show_games_odds_tab():
