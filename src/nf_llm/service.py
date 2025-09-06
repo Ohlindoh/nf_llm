@@ -4,6 +4,7 @@ Thin service layer that the API (or any other client) can call.
 Keeps LineupOptimizer details out of the HTTP layer.
 """
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -129,3 +130,59 @@ def benchmark_optimization(
     )
 
     return results
+
+
+def _load_dk_player_ids(slate_id: str) -> set[str]:
+    """Load DraftKings player identifiers for a slate.
+
+    Looks for a raw DraftKings salary file produced by the data collectors
+    and returns a set of player identifiers. We include multiple identifier
+    columns (playerId, playerDkId, draftableId) to be tolerant of whichever
+    ID DraftKings requires for uploads.
+    """
+
+    base_dir = Path(os.getenv("DK_SALARIES_DIR", "data/raw/dk_salaries"))
+    salary_file = base_dir / f"{slate_id}_raw.csv"
+    if not salary_file.exists():
+        raise FileNotFoundError(f"Slate data not found: {salary_file}")
+
+    df = pd.read_csv(salary_file, dtype=str)
+    valid_ids: set[str] = set()
+    for col in ["playerId", "playerDkId", "draftableId"]:
+        if col in df.columns:
+            valid_ids.update(df[col].dropna().astype(str))
+    return valid_ids
+
+
+def export_dk_csv(slate_id: str, lineups: list[list[str]]) -> tuple[str, list[int]]:
+    """Validate lineups and produce a DraftKings upload CSV.
+
+    Parameters
+    ----------
+    slate_id : str
+        Identifier for the DraftKings slate. Used to locate salary data and
+        validate player IDs.
+    lineups : list[list[str]]
+        Each inner list contains nine DraftKings player IDs in roster order.
+
+    Returns
+    -------
+    tuple[str, list[int]]
+        The CSV content as a string and a list of 1-based indices for any
+        invalid lineups.
+    """
+
+    valid_ids = _load_dk_player_ids(slate_id)
+
+    header = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
+    csv_lines = [",".join(header)]
+    invalid: list[int] = []
+
+    for idx, lineup in enumerate(lineups, start=1):
+        if len(lineup) != 9 or any(pid not in valid_ids for pid in lineup):
+            invalid.append(idx)
+            continue
+        csv_lines.append(",".join(lineup))
+
+    csv_content = "\n".join(csv_lines) + ("\n" if csv_lines else "")
+    return csv_content, invalid

@@ -2,10 +2,10 @@ import logging
 import traceback
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel, Field
 
-from nf_llm.service import build_lineups
+from nf_llm.service import build_lineups, export_dk_csv
 
 app = FastAPI(title="NF-LLM API", version="0.1.0")
 
@@ -30,6 +30,11 @@ class UndervaluedPlayersRequest(BaseModel):
 
 class UndervaluedPlayersResponse(BaseModel):
     players: dict[str, list[dict[str, Any]]]
+
+
+class DKCSVRequest(BaseModel):
+    slate_id: str = Field(..., description="DraftKings slate identifier")
+    lineups: list[list[str]] = Field(..., description="List of lineups to export")
 
 
 @app.on_event("startup")
@@ -78,6 +83,29 @@ def get_undervalued_players_endpoint(req: UndervaluedPlayersRequest):
         raise HTTPException(
             status_code=500, detail="Internal error getting undervalued players"
         ) from err
+
+
+@app.post("/export/dk_csv")
+def export_dk_csv_endpoint(req: DKCSVRequest):
+    """Validate lineups and return a DraftKings upload CSV.
+
+    The response body is the CSV content. If any lineups fail validation, their
+    1-based indices are exposed in the ``X-Invalid-Lineups`` header.
+    """
+
+    try:
+        csv_content, invalid = export_dk_csv(req.slate_id, req.lineups)
+    except FileNotFoundError as err:
+        raise HTTPException(status_code=404, detail=str(err))
+    except Exception as err:  # pragma: no cover - unexpected errors
+        logging.error("DK CSV export crashed:\n%s", traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Internal DK CSV error") from err
+
+    headers = {}
+    if invalid:
+        headers["X-Invalid-Lineups"] = ",".join(str(i) for i in invalid)
+
+    return Response(content=csv_content, media_type="text/csv", headers=headers)
 
 
 @app.get("/health")

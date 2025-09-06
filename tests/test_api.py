@@ -49,3 +49,44 @@ def test_optimise_happy_path(tmp_path: Path):
     assert len(data["lineups"]) == 1
     # each lineup should be a dict keyed by positions
     assert isinstance(data["lineups"][0], dict)
+
+
+def test_export_dk_csv(tmp_path: Path, monkeypatch):
+    slate_id = "DK_MAIN_2025W01"
+    salaries_dir = tmp_path / "dk_salaries"
+    salaries_dir.mkdir()
+    salary_file = salaries_dir / f"{slate_id}_raw.csv"
+    salary_file.write_text(
+        """playerId,playerDkId,draftableId
+1,123,100
+2,234,101
+3,345,102
+4,456,103
+5,567,104
+6,678,105
+7,789,106
+8,890,107
+9,901,108
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DK_SALARIES_DIR", str(salaries_dir))
+
+    payload = {
+        "slate_id": slate_id,
+        "lineups": [
+            ["123", "234", "345", "456", "567", "678", "789", "890", "901"],
+            ["123", "234", "999", "456", "567", "678", "789", "890", "901"],
+            ["123", "234", "345", "456", "567", "678", "789", "890"],
+        ],
+    }
+
+    resp = client.post("/export/dk_csv", json=payload)
+    assert resp.status_code == 200
+    assert resp.headers.get("content-type", "").startswith("text/csv")
+
+    lines = [ln for ln in resp.text.strip().split("\n") if ln]
+    assert lines[0] == "QB,RB,RB,WR,WR,WR,TE,FLEX,DST"
+    assert len(lines) == 2  # header + 1 valid lineup
+    assert lines[1] == "123,234,345,456,567,678,789,890,901"
+    assert resp.headers["X-Invalid-Lineups"] == "2,3"
