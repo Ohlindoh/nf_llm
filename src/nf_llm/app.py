@@ -313,7 +313,8 @@ def show_optimizer_tab():
                 slate_id="DK‑NFL‑2025‑Week01",
                 constraints=constraints,
             )
-        
+        st.session_state["last_run_id"] = st.session_state.get("last_run_id", 1)
+
         if not lineups:
             st.error("No lineups were generated.")
         else:
@@ -322,6 +323,26 @@ def show_optimizer_tab():
             for i, lineup in enumerate(lineups):
                 with lineup_tabs[i]:
                     display_lineup(lineup)
+
+            run_id = st.session_state.get("last_run_id")
+            if run_id is not None:
+                try:
+                    r = httpx.get(
+                        f"{API_ROOT}/optimizer_runs/{run_id}/export/dk_csv",
+                        timeout=60,
+                    )
+                except Exception as err:  # pragma: no cover - network failures
+                    st.error(f"API request failed: {err}")
+                else:
+                    if r.status_code == 200:
+                        st.download_button(
+                            "Export to DraftKings CSV",
+                            data=r.text,
+                            file_name=f"{run_id}_NFL_CLASSIC.csv",
+                            mime="text/csv",
+                        )
+                    else:
+                        st.error(f"API returned {r.status_code}: {r.text}")
 
 
 def show_lineups_tab():

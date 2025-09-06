@@ -186,3 +186,108 @@ def export_dk_csv(slate_id: str, lineups: list[list[str]]) -> tuple[str, list[in
 
     csv_content = "\n".join(csv_lines) + ("\n" if csv_lines else "")
     return csv_content, invalid
+
+
+def export_run_dk_csv(run_id: int) -> tuple[str, str]:
+    """Build a DraftKings CSV for a stored optimiser run.
+
+    Parameters
+    ----------
+    run_id:
+        Identifier for the optimiser run whose lineups should be exported.
+
+    Returns
+    -------
+    tuple[str, str]
+        CSV content and the associated ``slate_id``.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the run contains no lineups.
+    ValueError
+        If the run spans multiple slates, has missing slots or players
+        missing a DraftKings mapping.
+    """
+
+    import duckdb
+
+    db_url = os.getenv("DATABASE_URL", "duckdb:////app/data/nf_llm.duckdb")
+    db_path = db_url.replace("duckdb:///", "")
+    con = duckdb.connect(database=db_path)
+
+    lineups_df = con.execute(
+        "SELECT lineup_id, slate_id FROM optimizer_lineups WHERE run_id = ?",
+        [run_id],
+    ).fetchdf()
+
+    if lineups_df.empty:
+        raise FileNotFoundError(f"No lineups for run {run_id}")
+
+    if lineups_df["slate_id"].nunique() > 1:
+        raise ValueError("multiple slates in run")
+
+    slate_id = str(lineups_df["slate_id"].iloc[0])
+    lineup_ids = lineups_df["lineup_id"].tolist()
+
+    salary_df = con.execute(
+        """
+        SELECT player_id, dk_player_id
+        FROM (
+            SELECT
+                player_id,
+                dk_player_id,
+                pos,
+                ROW_NUMBER() OVER (
+                    PARTITION BY player_id
+                    ORDER BY (pos = 'FLEX')
+                ) AS rn
+            FROM salaries
+            WHERE slate_id = ?
+        )
+        WHERE rn = 1
+        """,
+        [slate_id],
+    ).fetchdf()
+
+    salary_map = {
+        int(row.player_id): str(row.dk_player_id) for row in salary_df.itertuples()
+    }
+
+    placeholders = ",".join("?" for _ in lineup_ids)
+    players_df = con.execute(
+        f"SELECT lineup_id, slot, player_id FROM optimizer_lineup_players "
+        f"WHERE lineup_id IN ({placeholders})",
+        lineup_ids,
+    ).fetchdf()
+
+    missing_players = sorted(
+        {
+            int(pid)
+            for pid in players_df["player_id"].tolist()
+            if int(pid) not in salary_map
+        }
+    )
+    if missing_players:
+        raise ValueError(
+            "unmapped player to dk_player_id: " + ",".join(map(str, missing_players))
+        )
+
+    slot_order = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+    lineups: dict[int, dict[str, str]] = {lid: {} for lid in lineup_ids}
+    for row in players_df.itertuples():
+        lineups[row.lineup_id][row.slot] = salary_map[int(row.player_id)]
+
+    for lid, slots in lineups.items():
+        if set(slots.keys()) != set(slot_order):
+            raise ValueError(f"missing/ambiguous slot in lineup {lid}")
+
+    header_display = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
+    csv_lines = [",".join(header_display)]
+    for lid in lineup_ids:
+        slots = lineups[lid]
+        csv_lines.append(",".join(slots[slot] for slot in slot_order))
+
+    con.close()
+
+    return "\n".join(csv_lines) + "\n", slate_id
