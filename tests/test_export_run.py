@@ -152,3 +152,30 @@ def test_export_run_dk_csv_mixed_slate(tmp_path: Path, monkeypatch):
     resp = client.get(f"/optimizer_runs/{run_id}/export/dk_csv")
     assert resp.status_code == 400
     assert "multiple slates" in resp.json()["detail"].lower()
+
+
+def test_export_run_dk_csv_bad_slots(tmp_path: Path, monkeypatch):
+    con, db_path = _setup_db(tmp_path)
+    monkeypatch.setenv("DATABASE_URL", f"duckdb:///{db_path}")
+
+    run_id = 4
+    slate = "SLATE1"
+    con.execute("INSERT INTO optimizer_lineups VALUES (1, ?, ?)", [run_id, slate])
+    # missing WR3, extra K slot
+    slots = ["QB", "RB1", "RB2", "WR1", "WR2", "TE", "FLEX", "DST", "K"]
+    for slot, pid in zip(slots, range(1, 10), strict=False):
+        con.execute(
+            "INSERT INTO optimizer_lineup_players VALUES (1, ?, ?)", [slot, pid]
+        )
+        pos = POS_MAP.get(slot, "DST")
+        con.execute(
+            "INSERT INTO salaries VALUES (?, ?, ?, ?)",
+            [slate, pid, f"{pid+1000}", pos],
+        )
+    con.close()
+
+    resp = client.get(f"/optimizer_runs/{run_id}/export/dk_csv")
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert "WR3" in detail
+    assert "K" in detail

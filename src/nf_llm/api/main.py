@@ -20,6 +20,7 @@ class LineupRequest(BaseModel):
 
 
 class LineupResponse(BaseModel):
+    run_id: int
     lineups: list[dict[str, Any]]
 
 
@@ -48,7 +49,7 @@ def optimise(req: LineupRequest):
     Thin HTTP wrapper that delegates to the pure function.
     """
     try:
-        lineups = build_lineups(
+        run_id, lineups = build_lineups(
             csv_path=req.csv_path,
             slate_id=req.slate_id,
             constraints=req.constraints,
@@ -61,7 +62,7 @@ def optimise(req: LineupRequest):
         logging.error("Optimiser crashed:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal optimiser error") from err
 
-    return {"lineups": lineups}
+    return {"run_id": run_id, "lineups": lineups}
 
 
 @app.post("/undervalued-players", response_model=UndervaluedPlayersResponse)

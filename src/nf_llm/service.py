@@ -18,7 +18,7 @@ def build_lineups(
     csv_path: str,
     slate_id: str,
     constraints: dict[str, Any],
-) -> list[dict]:
+) -> tuple[int, list[dict]]:
     """
     Parameters
     ----------
@@ -31,7 +31,8 @@ def build_lineups(
 
     Returns
     -------
-    list[dict]  # JSON‑serialisable line‑ups
+    tuple[int, list[dict]]
+        Run identifier and JSON-serialisable line-ups
     """
     # --- 1. Load data ---
     csv_file = Path(csv_path)
@@ -45,8 +46,34 @@ def build_lineups(
     opt = LineupOptimizer(df)
     lineups = opt.generate_lineups(constraints=constraints)
 
-    # --- 3. Return plain Python objects (already JSON‑safe) ---
-    return lineups
+    # --- 3. Persist run for later export ---
+    import duckdb
+
+    db_url = os.getenv("DATABASE_URL", "duckdb:////app/data/nf_llm.duckdb")
+    db_path = db_url.replace("duckdb:///", "")
+    con = duckdb.connect(database=db_path)
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS optimizer_lineups (lineup_id INT, run_id INT, slate_id TEXT)"
+    )
+    con.execute(
+        "CREATE TABLE IF NOT EXISTS optimizer_lineup_players (lineup_id INT, slot TEXT, player_id INT)"
+    )
+    run_id = con.execute("SELECT COALESCE(MAX(run_id), 0) + 1 FROM optimizer_lineups").fetchone()[0]
+
+    for idx, lineup in enumerate(lineups, start=1):
+        con.execute(
+            "INSERT INTO optimizer_lineups VALUES (?, ?, ?)", [idx, run_id, slate_id]
+        )
+        for slot, player in lineup.items():
+            pid = int(player.get("player_id", 0))
+            con.execute(
+                "INSERT INTO optimizer_lineup_players VALUES (?, ?, ?)",
+                [idx, slot, pid],
+            )
+    con.close()
+
+    # --- 4. Return run_id and lineups ---
+    return run_id, lineups
 
 
 def get_undervalued_players_data(
@@ -275,12 +302,27 @@ def export_run_dk_csv(run_id: int) -> tuple[str, str]:
 
     slot_order = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
     lineups: dict[int, dict[str, str]] = {lid: {} for lid in lineup_ids}
+    rb_counts: dict[int, int] = {lid: 0 for lid in lineup_ids}
+    wr_counts: dict[int, int] = {lid: 0 for lid in lineup_ids}
     for row in players_df.itertuples():
-        lineups[row.lineup_id][row.slot] = salary_map[int(row.player_id)]
+        slot = row.slot
+        if slot == "RB":
+            rb_counts[row.lineup_id] += 1
+            slot = f"RB{rb_counts[row.lineup_id]}"
+        elif slot == "WR":
+            wr_counts[row.lineup_id] += 1
+            slot = f"WR{wr_counts[row.lineup_id]}"
+        lineups[row.lineup_id][slot] = salary_map[int(row.player_id)]
 
+    expected = set(slot_order)
     for lid, slots in lineups.items():
-        if set(slots.keys()) != set(slot_order):
-            raise ValueError(f"missing/ambiguous slot in lineup {lid}")
+        actual = set(slots.keys())
+        if actual != expected:
+            missing = ",".join(sorted(expected - actual)) or "none"
+            extra = ",".join(sorted(actual - expected)) or "none"
+            raise ValueError(
+                f"slot mismatch in lineup {lid}: missing {missing}; extra {extra}"
+            )
 
     header_display = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
     csv_lines = [",".join(header_display)]
