@@ -165,6 +165,11 @@ def collect_draftkings_data(
             processed_player = {
                 "player_name": player["displayName"],
                 "salary": player["salary"],
+                "dk_player_id": player.get("playerId", ""),
+                "draftable_id": player.get("draftableId", ""),
+                "player_position_id": player.get("rosterSlotId", ""),
+                "position": player.get("position", ""),
+                "team_abbreviation": player.get("teamAbbreviation", ""),
                 # Include other fields as needed
             }
             processed_data.append(processed_player)

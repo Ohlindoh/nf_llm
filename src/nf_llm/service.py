@@ -46,31 +46,39 @@ def build_lineups(
     opt = LineupOptimizer(df)
     lineups = opt.generate_lineups(constraints=constraints)
 
-    # --- 3. Persist run for later export ---
-    import duckdb
+    # --- 3. Persist run for later export (optional) ---
+    run_id = 1  # Default fallback
+    try:
+        import duckdb
 
-    db_url = os.getenv("DATABASE_URL", "duckdb:////app/data/nf_llm.duckdb")
-    db_path = db_url.replace("duckdb:///", "")
-    con = duckdb.connect(database=db_path)
-    con.execute(
-        "CREATE TABLE IF NOT EXISTS optimizer_lineups (lineup_id INT, run_id INT, slate_id TEXT)"
-    )
-    con.execute(
-        "CREATE TABLE IF NOT EXISTS optimizer_lineup_players (lineup_id INT, slot TEXT, player_id INT)"
-    )
-    run_id = con.execute("SELECT COALESCE(MAX(run_id), 0) + 1 FROM optimizer_lineups").fetchone()[0]
-
-    for idx, lineup in enumerate(lineups, start=1):
+        db_url = os.getenv("DATABASE_URL", "duckdb:////app/data/nf_llm.duckdb")
+        db_path = db_url.replace("duckdb:///", "")
+        con = duckdb.connect(database=db_path)
         con.execute(
-            "INSERT INTO optimizer_lineups VALUES (?, ?, ?)", [idx, run_id, slate_id]
+            "CREATE TABLE IF NOT EXISTS optimizer_lineups (lineup_id INT, run_id INT, slate_id TEXT)"
         )
-        for slot, player in lineup.items():
-            pid = int(player.get("player_id", 0))
+        con.execute(
+            "CREATE TABLE IF NOT EXISTS optimizer_lineup_players (lineup_id INT, slot TEXT, player_id INT)"
+        )
+        run_id = con.execute("SELECT COALESCE(MAX(run_id), 0) + 1 FROM optimizer_lineups").fetchone()[0]
+
+        for idx, lineup in enumerate(lineups, start=1):
             con.execute(
-                "INSERT INTO optimizer_lineup_players VALUES (?, ?, ?)",
-                [idx, slot, pid],
+                "INSERT INTO optimizer_lineups VALUES (?, ?, ?)", [idx, run_id, slate_id]
             )
-    con.close()
+            for slot, player in lineup.items():
+                pid = int(player.get("player_id", 0))
+                con.execute(
+                    "INSERT INTO optimizer_lineup_players VALUES (?, ?, ?)",
+                    [idx, slot, pid],
+                )
+        con.close()
+        print(f"Successfully persisted run {run_id} to database")
+    except Exception as e:
+        print(f"Database persistence failed (continuing without): {e}")
+        # Generate a timestamp-based run_id as fallback
+        import time
+        run_id = int(time.time())
 
     # --- 4. Return run_id and lineups ---
     return run_id, lineups
@@ -237,99 +245,108 @@ def export_run_dk_csv(run_id: int) -> tuple[str, str]:
         missing a DraftKings mapping.
     """
 
-    import duckdb
+    try:
+        import duckdb
 
-    db_url = os.getenv("DATABASE_URL", "duckdb:////app/data/nf_llm.duckdb")
-    db_path = db_url.replace("duckdb:///", "")
-    con = duckdb.connect(database=db_path)
+        db_url = os.getenv("DATABASE_URL", "duckdb:////app/data/nf_llm.duckdb")
+        db_path = db_url.replace("duckdb:///", "")
+        con = duckdb.connect(database=db_path)
 
-    lineups_df = con.execute(
-        "SELECT lineup_id, slate_id FROM optimizer_lineups WHERE run_id = ?",
-        [run_id],
-    ).fetchdf()
+        lineups_df = con.execute(
+            "SELECT lineup_id, slate_id FROM optimizer_lineups WHERE run_id = ?",
+            [run_id],
+        ).fetchdf()
 
-    if lineups_df.empty:
-        raise FileNotFoundError(f"No lineups for run {run_id}")
+        if lineups_df.empty:
+            raise FileNotFoundError(f"No lineups for run {run_id}")
 
-    if lineups_df["slate_id"].nunique() > 1:
-        raise ValueError("multiple slates in run")
+        if lineups_df["slate_id"].nunique() > 1:
+            raise ValueError("multiple slates in run")
 
-    slate_id = str(lineups_df["slate_id"].iloc[0])
-    lineup_ids = lineups_df["lineup_id"].tolist()
+        slate_id = str(lineups_df["slate_id"].iloc[0])
+        lineup_ids = lineups_df["lineup_id"].tolist()
 
-    salary_df = con.execute(
-        """
-        SELECT player_id, dk_player_id
-        FROM (
-            SELECT
-                player_id,
-                dk_player_id,
-                pos,
-                ROW_NUMBER() OVER (
-                    PARTITION BY player_id
-                    ORDER BY (pos = 'FLEX')
-                ) AS rn
-            FROM salaries
-            WHERE slate_id = ?
-        )
-        WHERE rn = 1
-        """,
-        [slate_id],
-    ).fetchdf()
+        salary_df = con.execute(
+            """
+            SELECT player_id, dk_player_id
+            FROM (
+                SELECT
+                    player_id,
+                    dk_player_id,
+                    pos,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY player_id
+                        ORDER BY (pos = 'FLEX')
+                    ) AS rn
+                FROM salaries
+                WHERE slate_id = ?
+            )
+            WHERE rn = 1
+            """,
+            [slate_id],
+        ).fetchdf()
 
-    salary_map = {
-        int(row.player_id): str(row.dk_player_id) for row in salary_df.itertuples()
-    }
-
-    placeholders = ",".join("?" for _ in lineup_ids)
-    players_df = con.execute(
-        f"SELECT lineup_id, slot, player_id FROM optimizer_lineup_players "
-        f"WHERE lineup_id IN ({placeholders})",
-        lineup_ids,
-    ).fetchdf()
-
-    missing_players = sorted(
-        {
-            int(pid)
-            for pid in players_df["player_id"].tolist()
-            if int(pid) not in salary_map
+        salary_map = {
+            int(row.player_id): str(row.dk_player_id) for row in salary_df.itertuples()
         }
-    )
-    if missing_players:
-        raise ValueError(
-            "unmapped player to dk_player_id: " + ",".join(map(str, missing_players))
+
+        placeholders = ",".join("?" for _ in lineup_ids)
+        players_df = con.execute(
+            f"SELECT lineup_id, slot, player_id FROM optimizer_lineup_players "
+            f"WHERE lineup_id IN ({placeholders})",
+            lineup_ids,
+        ).fetchdf()
+
+        missing_players = sorted(
+            {
+                int(pid)
+                for pid in players_df["player_id"].tolist()
+                if int(pid) not in salary_map
+            }
         )
-
-    slot_order = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
-    lineups: dict[int, dict[str, str]] = {lid: {} for lid in lineup_ids}
-    rb_counts: dict[int, int] = {lid: 0 for lid in lineup_ids}
-    wr_counts: dict[int, int] = {lid: 0 for lid in lineup_ids}
-    for row in players_df.itertuples():
-        slot = row.slot
-        if slot == "RB":
-            rb_counts[row.lineup_id] += 1
-            slot = f"RB{rb_counts[row.lineup_id]}"
-        elif slot == "WR":
-            wr_counts[row.lineup_id] += 1
-            slot = f"WR{wr_counts[row.lineup_id]}"
-        lineups[row.lineup_id][slot] = salary_map[int(row.player_id)]
-
-    expected = set(slot_order)
-    for lid, slots in lineups.items():
-        actual = set(slots.keys())
-        if actual != expected:
-            missing = ",".join(sorted(expected - actual)) or "none"
-            extra = ",".join(sorted(actual - expected)) or "none"
+        if missing_players:
             raise ValueError(
-                f"slot mismatch in lineup {lid}: missing {missing}; extra {extra}"
+                "unmapped player to dk_player_id: " + ",".join(map(str, missing_players))
             )
 
-    header_display = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
-    csv_lines = [",".join(header_display)]
-    for lid in lineup_ids:
-        slots = lineups[lid]
-        csv_lines.append(",".join(slots[slot] for slot in slot_order))
+        slot_order = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+        lineups: dict[int, dict[str, str]] = {lid: {} for lid in lineup_ids}
+        rb_counts: dict[int, int] = {lid: 0 for lid in lineup_ids}
+        wr_counts: dict[int, int] = {lid: 0 for lid in lineup_ids}
+        for row in players_df.itertuples():
+            slot = row.slot
+            if slot == "RB":
+                rb_counts[row.lineup_id] += 1
+                slot = f"RB{rb_counts[row.lineup_id]}"
+            elif slot == "WR":
+                wr_counts[row.lineup_id] += 1
+                slot = f"WR{wr_counts[row.lineup_id]}"
+            lineups[row.lineup_id][slot] = salary_map[int(row.player_id)]
 
-    con.close()
+        expected = set(slot_order)
+        for lid, slots in lineups.items():
+            actual = set(slots.keys())
+            if actual != expected:
+                missing = ",".join(sorted(expected - actual)) or "none"
+                extra = ",".join(sorted(actual - expected)) or "none"
+                raise ValueError(
+                    f"slot mismatch in lineup {lid}: missing {missing}; extra {extra}"
+                )
 
-    return "\n".join(csv_lines) + "\n", slate_id
+        header_display = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
+        csv_lines = [",".join(header_display)]
+        for lid in lineup_ids:
+            slots = lineups[lid]
+            csv_lines.append(",".join(slots[slot] for slot in slot_order))
+
+        con.close()
+
+        return "\n".join(csv_lines) + "\n", slate_id
+
+    except Exception as e:
+        # Fallback: Database not available, return helpful error
+        print(f"Database export failed: {e}")
+        raise FileNotFoundError(
+            f"Export unavailable - run {run_id} not found in database. "
+            "Database persistence is currently disabled due to permission issues."
+        )

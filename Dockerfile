@@ -42,9 +42,13 @@ FROM base as production
 COPY . .
 RUN uv sync --frozen
 
+# Create data directory with proper permissions
+RUN mkdir -p /app/data
+
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
+    && chown -R app:app /app \
+    && chown -R app:app /app/data
 USER app
 
 EXPOSE 8000 8501
