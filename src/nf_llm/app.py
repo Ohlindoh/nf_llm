@@ -73,9 +73,10 @@ def call_optimiser(csv_path: str, slate_id: str, constraints: dict):
     r = httpx.post(f"{API_ROOT}/optimise", json=payload, timeout=60)
     if r.status_code != 200:
         st.error(f"API returned {r.status_code}: {r.json()['detail']}")
-        return None  # caller can handle None gracefully
+        return None, None  # caller can handle None gracefully
 
-    return r.json()["lineups"]  # FastAPI guarantees this key
+    data = r.json()
+    return data.get("run_id"), data["lineups"]
 
 
 # Function to process user input and strategies
@@ -308,12 +309,13 @@ def show_optimizer_tab():
         constraints["max_exposure"] = max_exposure / 100  # Convert to decimal
         
         with st.spinner("Generating lineups..."):
-            lineups = call_optimiser(
+            run_id, lineups = call_optimiser(
                 csv_path="data/merged_fantasy_football_data.csv",
                 slate_id="DK‑NFL‑2025‑Week01",
                 constraints=constraints,
             )
-        
+        st.session_state["last_run_id"] = run_id
+
         if not lineups:
             st.error("No lineups were generated.")
         else:
@@ -322,6 +324,35 @@ def show_optimizer_tab():
             for i, lineup in enumerate(lineups):
                 with lineup_tabs[i]:
                     display_lineup(lineup)
+
+            run_id = st.session_state.get("last_run_id")
+            if run_id is not None:
+                if st.button("Export to DraftKings CSV"):
+                    try:
+                        r = httpx.get(
+                            f"{API_ROOT}/optimizer_runs/{run_id}/export/dk_csv",
+                            timeout=60,
+                        )
+                    except Exception as err:  # pragma: no cover - network failures
+                        st.error(f"API request failed: {err}")
+                    else:
+                        if r.status_code == 200:
+                            st.session_state["dk_csv_bytes"] = r.content
+                            cd = r.headers.get("content-disposition", "")
+                            fname = f"{run_id}_NFL_CLASSIC.csv"
+                            if "filename=" in cd:
+                                fname = cd.split("filename=")[-1].strip('"')
+                            st.session_state["dk_csv_name"] = fname
+                        else:
+                            st.error(f"API returned {r.status_code}: {r.text}")
+
+            if "dk_csv_bytes" in st.session_state:
+                st.download_button(
+                    "Download DraftKings CSV",
+                    data=st.session_state["dk_csv_bytes"],
+                    file_name=st.session_state.get("dk_csv_name", "download.csv"),
+                    mime="text/csv",
+                )
 
 
 def show_lineups_tab():
@@ -363,7 +394,7 @@ def show_lineups_tab():
 
         st.download_button(
             "Download DK CSV",
-            data=r.text,
+            data=r.content,
             file_name="dk_lineups.csv",
             mime="text/csv",
         )
