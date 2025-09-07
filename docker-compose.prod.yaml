@@ -1,9 +1,5 @@
 version: "3.9"
 
-volumes:
-  duckdata:
-    driver: local
-
 networks:
   backend:
     driver: bridge
@@ -21,11 +17,8 @@ services:
       --port 8000 
       --workers 4
     environment:
-      - DATABASE_URL=${DATABASE_URL:-duckdb:////app/data/nf_llm.duckdb}
       - PYTHONPATH=/app/src
       - ENVIRONMENT=production
-    volumes:
-      - duckdata:/app/data
     networks: [backend]
     ports:
       - "8000:8000"
@@ -60,8 +53,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    volumes:
-      - duckdata:/app/data
     networks: [backend, frontend]
     ports:
       - "8501:8501"

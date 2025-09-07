@@ -1,9 +1,5 @@
 version: "3.9"
 
-volumes:
-  duckdata:
-    driver: local
-
 networks:
   backend:
     driver: bridge
@@ -18,10 +14,8 @@ services:
       --port 8000 
       --reload
     environment:
-      - DATABASE_URL=duckdb:////app/data/nf_llm.duckdb
       - PYTHONPATH=/app/src
     volumes:
-      - duckdata:/app/data
       - .:/app:cached  # For development hot reload
     networks: [backend]
     ports:
@@ -51,7 +45,6 @@ services:
       api:
         condition: service_healthy
     volumes:
-      - duckdata:/app/data
       - .:/app:cached  # For development hot reload
     networks: [backend]
     ports:
@@ -64,21 +57,3 @@ services:
       start_period: 40s
     restart: unless-stopped
 
-  # Optional: Database management service
-  db-admin:
-    build: 
-      context: .
-    command: >
-      python -c "
-      import time
-      import duckdb
-      print('Database admin ready. Connect to /app/data/nf_llm.duckdb')
-      while True: time.sleep(60)
-      "
-    environment:
-      - DATABASE_URL=duckdb:////app/data/nf_llm.duckdb
-    volumes:
-      - duckdata:/app/data
-      - .:/app:cached
-    networks: [backend]
-    profiles: ["admin"]  # Only start with --profile admin
