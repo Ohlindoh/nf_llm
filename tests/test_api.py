@@ -11,7 +11,7 @@ client = TestClient(app)
 def test_optimise_happy_path(tmp_path: Path):
     # --- arrange ---
     # point to a *real* CSV in your repo; here we copy one into tmp_path
-    sample_csv = tmp_path / "players.csv"
+    sample_csv = tmp_path / "DK_MAIN_2025W01_raw.csv"
     sample_csv.write_text(
         """player_name,player_position_id,team,salary,projected_points
     C.J. Stroud,QB,HOU,7000,22.4
@@ -35,7 +35,6 @@ def test_optimise_happy_path(tmp_path: Path):
 
     payload = {
         "csv_path": str(sample_csv),
-        "slate_id": "DK-NFL-2025-Week01",
         "constraints": {"num_lineups": 1},
     }
 
@@ -45,6 +44,7 @@ def test_optimise_happy_path(tmp_path: Path):
     # --- assert ---
     assert resp.status_code == 200
     data = resp.json()
+    assert data["slate_id"] == "DK_MAIN_2025W01"
     assert "lineups" in data and isinstance(data["lineups"], list)
     assert len(data["lineups"]) == 1
     # each lineup should be a dict keyed by positions

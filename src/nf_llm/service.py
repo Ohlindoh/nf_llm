@@ -14,24 +14,45 @@ from nf_llm.data_io import preprocess_data
 from nf_llm.optimizer import LineupOptimizer
 
 
+def _infer_slate_id(csv_file: Path, df: pd.DataFrame) -> str:
+    """Derive a slate identifier from the salary CSV.
+
+    The first preference is a ``slate_id`` column within the CSV. If that is
+    absent, we fall back to parsing the filename. Files produced by the DK
+    collector follow the ``<slate_id>_raw.csv`` convention, so trimming the
+    ``_raw`` suffix yields a usable identifier.
+    """
+
+    for col in df.columns:
+        if col.lower() == "slate_id" and not df[col].isna().all():
+            value = df[col].iloc[0]
+            if isinstance(value, str) and value:
+                return value
+
+    name = csv_file.stem
+    if name.endswith("_raw"):
+        name = name[:-4]
+    if not name:
+        raise ValueError("Unable to infer slate_id from salary CSV")
+    return name
+
+
 def build_lineups(
     csv_path: str,
-    slate_id: str,
     constraints: dict[str, Any],
-) -> list[dict]:
+) -> tuple[list[dict], str]:
     """
     Parameters
     ----------
     csv_path : str
         Path to the player CSV (relative or absolute).
-    slate_id : str
-        Identifier you care about (passed through for logging; optimiser ignores it for now).
     constraints : dict
         Same structure Streamlit already builds: num_lineups, max_exposure, must_include, etc.
 
     Returns
     -------
-    list[dict]  # JSON‑serialisable line‑ups
+    tuple[list[dict], str]
+        Generated lineups and the inferred ``slate_id``
     """
     # --- 1. Load data ---
     csv_file = Path(csv_path)
@@ -39,14 +60,15 @@ def build_lineups(
         raise FileNotFoundError(f"CSV not found: {csv_file}")
 
     df = pd.read_csv(csv_file)
+    slate_id = _infer_slate_id(csv_file, df)
     df = preprocess_data(df)
 
     # --- 2. Run optimiser ---
     opt = LineupOptimizer(df)
     lineups = opt.generate_lineups(constraints=constraints)
 
-    # --- 3. Return plain Python objects (already JSON‑safe) ---
-    return lineups
+    # --- 3. Return generated lineups with slate identifier ---
+    return lineups, slate_id
 
 
 def get_undervalued_players_data(
@@ -186,3 +208,5 @@ def export_dk_csv(slate_id: str, lineups: list[list[str]]) -> tuple[str, list[in
 
     csv_content = "\n".join(csv_lines) + ("\n" if csv_lines else "")
     return csv_content, invalid
+
+

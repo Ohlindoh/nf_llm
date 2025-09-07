@@ -64,18 +64,18 @@ user_input_agent = AssistantAgent(
 )
 
 
-def call_optimiser(csv_path: str, slate_id: str, constraints: dict):
+def call_optimiser(csv_path: str, constraints: dict):
     payload = {
         "csv_path": csv_path,
-        "slate_id": slate_id,
         "constraints": constraints,
     }
     r = httpx.post(f"{API_ROOT}/optimise", json=payload, timeout=60)
     if r.status_code != 200:
         st.error(f"API returned {r.status_code}: {r.json()['detail']}")
-        return None  # caller can handle None gracefully
+        return None, None  # caller can handle None gracefully
 
-    return r.json()["lineups"]  # FastAPI guarantees this key
+    data = r.json()
+    return data["lineups"], data.get("slate_id")
 
 
 # Function to process user input and strategies
@@ -308,12 +308,11 @@ def show_optimizer_tab():
         constraints["max_exposure"] = max_exposure / 100  # Convert to decimal
         
         with st.spinner("Generating lineups..."):
-            lineups = call_optimiser(
+            lineups, slate_id = call_optimiser(
                 csv_path="data/merged_fantasy_football_data.csv",
-                slate_id="DK‑NFL‑2025‑Week01",
                 constraints=constraints,
             )
-        
+
         if not lineups:
             st.error("No lineups were generated.")
         else:
@@ -322,6 +321,37 @@ def show_optimizer_tab():
             for i, lineup in enumerate(lineups):
                 with lineup_tabs[i]:
                     display_lineup(lineup)
+            if st.button("Export to DraftKings CSV"):
+                slot_order = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
+                try:
+                    dk_lineups = [
+                        [lineup[pos]["dk_player_id"] for pos in slot_order]
+                        for lineup in lineups
+                    ]
+                except KeyError as err:
+                    st.error(f"Missing DK player ID for position: {err}")
+                else:
+                    try:
+                        r = httpx.post(
+                            f"{API_ROOT}/export/dk_csv",
+                            json={
+                                "slate_id": slate_id,
+                                "lineups": dk_lineups,
+                            },
+                            timeout=60,
+                        )
+                    except Exception as err:  # pragma: no cover - network failures
+                        st.error(f"API request failed: {err}")
+                    else:
+                        if r.status_code == 200:
+                            st.download_button(
+                                "Download DraftKings CSV",
+                                data=r.content,
+                                file_name=f"{slate_id}_NFL_CLASSIC.csv",
+                                mime="text/csv",
+                            )
+                        else:
+                            st.error(f"API returned {r.status_code}: {r.text}")
 
 
 def show_lineups_tab():
@@ -363,7 +393,7 @@ def show_lineups_tab():
 
         st.download_button(
             "Download DK CSV",
-            data=r.text,
+            data=r.content,
             file_name="dk_lineups.csv",
             mime="text/csv",
         )

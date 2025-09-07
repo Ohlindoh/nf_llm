@@ -12,7 +12,6 @@ app = FastAPI(title="NF-LLM API", version="0.1.0")
 
 class LineupRequest(BaseModel):
     csv_path: str = Field(..., description="Path to player CSV")
-    slate_id: str = Field(..., description="Contest or slate identifier")
     constraints: dict[str, Any] = Field(
         default_factory=dict,
         description="Optimizer constraints (num_lineups, max_exposure, etc.)",
@@ -20,6 +19,7 @@ class LineupRequest(BaseModel):
 
 
 class LineupResponse(BaseModel):
+    slate_id: str
     lineups: list[dict[str, Any]]
 
 
@@ -48,9 +48,8 @@ def optimise(req: LineupRequest):
     Thin HTTP wrapper that delegates to the pure function.
     """
     try:
-        lineups = build_lineups(
+        lineups, slate_id = build_lineups(
             csv_path=req.csv_path,
-            slate_id=req.slate_id,
             constraints=req.constraints,
         )
     except FileNotFoundError as err:
@@ -61,7 +60,7 @@ def optimise(req: LineupRequest):
         logging.error("Optimiser crashed:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal optimiser error") from err
 
-    return {"lineups": lineups}
+    return {"slate_id": slate_id, "lineups": lineups}
 
 
 @app.post("/undervalued-players", response_model=UndervaluedPlayersResponse)
@@ -101,7 +100,9 @@ def export_dk_csv_endpoint(req: DKCSVRequest):
         logging.error("DK CSV export crashed:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal DK CSV error") from err
 
-    headers = {}
+    headers = {
+        "Content-Disposition": f"attachment; filename=\"{req.slate_id}_NFL_CLASSIC.csv\"",
+    }
     if invalid:
         headers["X-Invalid-Lineups"] = ",".join(str(i) for i in invalid)
 
