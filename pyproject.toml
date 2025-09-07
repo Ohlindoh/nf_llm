@@ -29,13 +29,9 @@ dependencies = [
     "streamlit",
       "requests",
       "typer",
-      "psycopg2-binary",
-      "sqlalchemy",
       "fastapi>=0.110,<1.0",
       "uvicorn[standard]>=0.25,<1.0",
       "pydantic>=2.6,<3.0",
-      "duckdb>=1.0",
-      "duckdb-engine>=0.13",
       "espn-api",
   ]
 
@@ -78,10 +74,6 @@ addopts = "-v --tb=short"
 [tool.mypy]
 python_version = "3.11"
 disallow_untyped_defs = true
-
-[tool.poetry.dependencies]
-duckdb = "^1.0"
-duckdb-engine = "^0.13"
 
 [dependency-groups]
 dev = [

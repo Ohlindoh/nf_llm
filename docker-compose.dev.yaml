@@ -9,10 +9,7 @@ services:
     volumes:
       - ./src:/app/src:cached  # Mount source code directly
       - ./pyproject.toml:/app/pyproject.toml:ro
-      - ./uv.lock:/app/uv.lock:ro
-      - duckdata:/app/data
     environment:
-      - DATABASE_URL=duckdb:////app/data/nf_llm.duckdb
       - PYTHONPATH=/app/src
       - WATCHFILES_FORCE_POLLING=true  # Better file watching on Windows
     command: >
@@ -29,8 +26,6 @@ services:
     volumes:
       - ./src:/app/src:cached  # Mount source code directly
       - ./pyproject.toml:/app/pyproject.toml:ro
-      - ./uv.lock:/app/uv.lock:ro
-      - duckdata:/app/data
     environment:
       - API_BASE_URL=http://api:8000
       - PYTHONPATH=/app/src

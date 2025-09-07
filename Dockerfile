@@ -25,22 +25,22 @@ RUN pip install uv
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml ./
 
 # Install dependencies
-RUN uv sync --frozen --no-install-project
+RUN uv sync --no-install-project
 
 # Development stage - fast rebuilds, no user switching
 FROM base as dev
 COPY . .
-RUN uv sync --frozen
+RUN uv sync
 EXPOSE 8000 8501
 CMD ["uv", "run", "python", "-c", "print('Dev container ready. Use docker-compose to run specific services.')"]
 
 # Production stage - includes security hardening
 FROM base as production
 COPY . .
-RUN uv sync --frozen
+RUN uv sync
 
 # Create data directory with proper permissions
 RUN mkdir -p /app/data
