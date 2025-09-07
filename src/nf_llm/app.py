@@ -78,6 +78,7 @@ def call_optimiser(csv_path: str, constraints: dict):
     return data["lineups"], data.get("slate_id")
 
 
+
 # Function to process user input and strategies
 def process_user_input_and_strategies(user_proxy, user_input_agent, user_input):
     if not user_input.strip():
@@ -292,9 +293,9 @@ def show_optimizer_tab():
     # Buttons for generating and resetting
     col1, col2 = st.columns(2)
     with col1:
-        generate_button = st.button("Generate Lineups", type="primary", use_container_width=True)
+        generate_button = st.button("Generate Lineups", type="primary", use_container_width=True, key="generate_lineups_btn")
     with col2:
-        if st.button("Reset", use_container_width=True):
+        if st.button("Reset", use_container_width=True, key="reset_btn"):
             st.experimental_rerun()
     
     # Results section
@@ -352,6 +353,64 @@ def show_optimizer_tab():
                             )
                         else:
                             st.error(f"API returned {r.status_code}: {r.text}")
+
+            # Export current lineups directly (not from database)
+            current_lineups = st.session_state.get("current_lineups")
+            current_slate_id = st.session_state.get("current_slate_id")
+            
+            if current_lineups and current_slate_id:
+                if st.button("Export to DraftKings CSV"):
+                    try:
+                        # Create CSV content directly from lineups
+                        import io
+                        
+                        # CSV header
+                        headers = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
+                        csv_lines = [",".join(headers)]
+                        
+                        # Add each lineup as a row
+                        for i, lineup in enumerate(current_lineups):
+                            lineup_row = []
+                            for position in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]:
+                                player_data = lineup.get(position, "")
+                                
+                                # If player_data is a dict with DK ID, use that; otherwise use the string value
+                                if isinstance(player_data, dict):
+                                    player_value = player_data.get("dk_player_id") or player_data.get("draftable_id") or player_data.get("player_name", "")
+                                else:
+                                    player_value = str(player_data)
+                                
+                                lineup_row.append(player_value)
+                            
+                            csv_lines.append(",".join(lineup_row))
+                        
+                        # Create CSV content
+                        csv_content = "\n".join(csv_lines) + "\n"
+                        
+                        # Store for download
+                        st.session_state["dk_csv_bytes"] = csv_content.encode('utf-8')
+                        st.session_state["dk_csv_name"] = f"lineups_{current_slate_id}.csv"
+                        
+                        st.success(f"Generated CSV with {len(current_lineups)} lineups!")
+                        
+                        # Add download button
+                        st.download_button(
+                            "Download DK CSV",
+                            data=st.session_state["dk_csv_bytes"],
+                            file_name=st.session_state["dk_csv_name"],
+                            mime="text/csv",
+                            type="primary"
+                        )
+                        
+                        # Show preview
+                        with st.expander("CSV Preview"):
+                            st.code(csv_content[:500] + ("..." if len(csv_content) > 500 else ""))
+                    except Exception as err:
+                        st.error(f" Export failed: {err}")
+                        import traceback
+                        st.code(traceback.format_exc())
+            else:
+                st.warning(" No lineups or slate ID available for export")
 
 
 def show_lineups_tab():

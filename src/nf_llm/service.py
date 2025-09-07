@@ -17,12 +17,10 @@ from nf_llm.optimizer import LineupOptimizer
 def _infer_slate_id(csv_file: Path, df: pd.DataFrame) -> str:
     """Derive a slate identifier from the salary CSV.
 
-    The first preference is a ``slate_id`` column within the CSV. If that is
-    absent, we fall back to parsing the filename. Files produced by the DK
-    collector follow the ``<slate_id>_raw.csv`` convention, so trimming the
-    ``_raw`` suffix yields a usable identifier.
+    Preference order:
+      1) Non-empty `slate_id` column in the CSV (first row)
+      2) Filename: collectors use `<slate_id>_raw.csv`; trim `_raw`
     """
-
     for col in df.columns:
         if col.lower() == "slate_id" and not df[col].isna().all():
             value = df[col].iloc[0]
@@ -47,21 +45,22 @@ def build_lineups(
     csv_path : str
         Path to the player CSV (relative or absolute).
     constraints : dict
-        Same structure Streamlit already builds: num_lineups, max_exposure, must_include, etc.
+        Same structure Streamlit already builds: num_lineups, max_exposure,
+        must_include, etc.
 
     Returns
     -------
-    tuple[list[dict], str]
-        Generated lineups and the inferred ``slate_id``
+    (lineups, slate_id) : tuple[list[dict], str]
+        Generated lineups and the inferred ``slate_id``.
     """
     # --- 1. Load data ---
     csv_file = Path(csv_path)
     if not csv_file.exists():
         raise FileNotFoundError(f"CSV not found: {csv_file}")
 
-    df = pd.read_csv(csv_file)
-    slate_id = _infer_slate_id(csv_file, df)
-    df = preprocess_data(df)
+    raw_df = pd.read_csv(csv_file)
+    slate_id = _infer_slate_id(csv_file, raw_df)
+    df = preprocess_data(raw_df)
 
     # --- 2. Run optimiser ---
     opt = LineupOptimizer(df)
@@ -97,12 +96,11 @@ def get_undervalued_players_data(
     df = pd.read_csv(csv_path)
     df = preprocess_data(df)
 
-    undervalued = {}
+    undervalued: dict[str, list[dict]] = {}
     for position in ["QB", "RB", "WR", "TE", "DST"]:
         position_data = df[df["player_position_id"] == position].sort_values(
             "value", ascending=False
         )
-        # Convert to list of dicts for JSON serialization
         players_list = position_data.head(top_n)[
             ["player_name", "team", "salary", "projected_points", "value"]
         ].to_dict("records")
@@ -119,24 +117,7 @@ def benchmark_optimization(
 ) -> dict[str, Any]:
     """
     Benchmark different scenario counts to find optimal performance/quality trade-off.
-    
-    Parameters
-    ----------
-    csv_path : str
-        Path to the player CSV file
-    slate_id : str
-        Identifier for the slate (for logging)
-    constraints : dict, optional
-        Optimization constraints
-    test_counts : list, optional
-        List of scenario counts to test (default: [10, 25, 50, 75, 100])
-    
-    Returns
-    -------
-    dict
-        Benchmark results with performance metrics for each scenario count
     """
-    # Load data
     csv_file = Path(csv_path)
     if not csv_file.exists():
         raise FileNotFoundError(f"CSV not found: {csv_file}")
@@ -144,11 +125,10 @@ def benchmark_optimization(
     df = pd.read_csv(csv_file)
     df = preprocess_data(df)
 
-    # Run benchmark
     opt = LineupOptimizer(df)
     results = opt.benchmark_scenario_counts(
         constraints=constraints or {},
-        test_counts=test_counts
+        test_counts=test_counts,
     )
 
     return results
@@ -162,7 +142,6 @@ def _load_dk_player_ids(slate_id: str) -> set[str]:
     columns (playerId, playerDkId, draftableId) to be tolerant of whichever
     ID DraftKings requires for uploads.
     """
-
     base_dir = Path(os.getenv("DK_SALARIES_DIR", "data/raw/dk_salaries"))
     salary_file = base_dir / f"{slate_id}_raw.csv"
     if not salary_file.exists():
@@ -193,7 +172,6 @@ def export_dk_csv(slate_id: str, lineups: list[list[str]]) -> tuple[str, list[in
         The CSV content as a string and a list of 1-based indices for any
         invalid lineups.
     """
-
     valid_ids = _load_dk_player_ids(slate_id)
 
     header = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
@@ -208,5 +186,3 @@ def export_dk_csv(slate_id: str, lineups: list[list[str]]) -> tuple[str, list[in
 
     csv_content = "\n".join(csv_lines) + ("\n" if csv_lines else "")
     return csv_content, invalid
-
-

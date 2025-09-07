@@ -503,14 +503,13 @@ class LineupOptimizer:
             if name in used_players:
                 continue
 
-            if is_selected(base_vars[name, pos]):
-                if pos in ["QB", "TE", "DST"]:
-                    lineup[pos] = player
-                    used_players.add(name)
-                elif pos in ["RB", "WR"]:
+            if pos in self.settings.POSITIONS and is_selected(base_vars[name, pos]):
+                if pos in position_counts:
                     position_counts[pos] += 1
                     lineup[f"{pos}{position_counts[pos]}"] = player
-                    used_players.add(name)
+                else:
+                    lineup[pos] = player
+                used_players.add(name)
 
         # Then handle FLEX position
         for player in players:

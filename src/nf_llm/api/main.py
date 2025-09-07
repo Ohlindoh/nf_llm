@@ -48,6 +48,7 @@ def optimise(req: LineupRequest):
     Thin HTTP wrapper that delegates to the pure function.
     """
     try:
+        # build_lineups now infers slate_id from the salary CSV and returns (lineups, slate_id)
         lineups, slate_id = build_lineups(
             csv_path=req.csv_path,
             constraints=req.constraints,
@@ -84,14 +85,13 @@ def get_undervalued_players_endpoint(req: UndervaluedPlayersRequest):
         ) from err
 
 
-@app.post("/export/dk_csv")
+@app.post("/export/dk_csv", deprecated=True)
 def export_dk_csv_endpoint(req: DKCSVRequest):
     """Validate lineups and return a DraftKings upload CSV.
 
     The response body is the CSV content. If any lineups fail validation, their
     1-based indices are exposed in the ``X-Invalid-Lineups`` header.
     """
-
     try:
         csv_content, invalid = export_dk_csv(req.slate_id, req.lineups)
     except FileNotFoundError as err:
@@ -101,7 +101,7 @@ def export_dk_csv_endpoint(req: DKCSVRequest):
         raise HTTPException(status_code=500, detail="Internal DK CSV error") from err
 
     headers = {
-        "Content-Disposition": f"attachment; filename=\"{req.slate_id}_NFL_CLASSIC.csv\"",
+        "Content-Disposition": f'attachment; filename="{req.slate_id}_NFL_CLASSIC.csv"',
     }
     if invalid:
         headers["X-Invalid-Lineups"] = ",".join(str(i) for i in invalid)
