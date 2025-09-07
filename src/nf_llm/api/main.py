@@ -85,7 +85,7 @@ def get_undervalued_players_endpoint(req: UndervaluedPlayersRequest):
         ) from err
 
 
-@app.post("/export/dk_csv")
+@app.post("/export/dk_csv", deprecated=True)
 def export_dk_csv_endpoint(req: DKCSVRequest):
     """Validate lineups and return a DraftKings upload CSV.
 
@@ -101,7 +101,9 @@ def export_dk_csv_endpoint(req: DKCSVRequest):
         logging.error("DK CSV export crashed:\n%s", traceback.format_exc())
         raise HTTPException(status_code=500, detail="Internal DK CSV error") from err
 
-    headers = {}
+    headers = {
+        "Content-Disposition": f"attachment; filename=\"{req.slate_id}_NFL_CLASSIC.csv\"",
+    }
     if invalid:
         headers["X-Invalid-Lineups"] = ",".join(str(i) for i in invalid)
 

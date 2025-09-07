@@ -31,7 +31,8 @@ def build_lineups(
 
     Returns
     -------
-    list[dict]  # JSON‑serialisable line‑ups
+    list[dict]
+        JSON-serialisable lineups
     """
     # --- 1. Load data ---
     csv_file = Path(csv_path)
@@ -45,7 +46,7 @@ def build_lineups(
     opt = LineupOptimizer(df)
     lineups = opt.generate_lineups(constraints=constraints)
 
-    # --- 3. Return plain Python objects (already JSON‑safe) ---
+    # --- 3. Return generated lineups ---
     return lineups
 
 
@@ -186,3 +187,5 @@ def export_dk_csv(slate_id: str, lineups: list[list[str]]) -> tuple[str, list[in
 
     csv_content = "\n".join(csv_lines) + ("\n" if csv_lines else "")
     return csv_content, invalid
+
+
