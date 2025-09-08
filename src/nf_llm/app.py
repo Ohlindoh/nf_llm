@@ -39,27 +39,114 @@ user_input_agent = AssistantAgent(
     name="UserInputAgent",
     llm_config=llm_config,
     system_message="""\
-        You are an assistant that processes user requests for fantasy football lineups.
+        You are an expert DFS (Daily Fantasy Sports) assistant that processes user requests for fantasy football lineups.
         Parse the user's natural language input and convert it into a structured JSON format for lineup optimization.
-        If the input doesn't contain specific constraints, return an empty JSON object.
-        Use the following examples as a guide:
-
-        Input: "I want Justin Jefferson and Dalvin Cook in my lineup"
-        Output: {"must_include": ["justinjefferson", "dalvincook"]}
-
-        Input: "Avoid players from the Jets"
-        Output: {"avoid_teams": ["nyj"]}
-
-        Input: "Focus on stacking players from Kansas City Chiefs"
-        Output: {"stack_teams": ["kc"]}
-
-        Input: "Limit exposure of Patrick Mahomes to 50%"
-        Output: {"player_exposure_limits": {"patrickmahomes": 0.5}}
-
-        Input: "Generate 5 unique lineups"
-        Output: {"num_lineups": 5}
-
-        Provide your output as a valid JSON object.
+        
+        LINEUP TYPES:
+        - Cash Game: Conservative lineups for 50/50s and double-ups. Focus on high-floor, consistent players.
+        - GPP (Tournament): High-risk/high-reward lineups for large tournaments. Focus on high-ceiling, volatile players.
+        - Balanced: Mix of safe and upside plays.
+        
+        STRATEGY PARAMETERS:
+        1. lineup_type: "cash", "gpp", or "balanced"
+        2. variance_preference: "low" (cash), "high" (gpp), or "medium" (balanced)
+        3. ownership_strategy: "contrarian" (fade chalk), "balanced", or "chalk" (popular plays)
+        4. correlation_strategy: "max" (heavy stacking), "moderate", or "none"
+        5. floor_weight: 0.0 to 1.0 (how much to prioritize floor vs ceiling)
+        
+        EXAMPLES:
+        
+        Input: "Create a cash lineup"
+        Output: {
+            "lineup_type": "cash",
+            "variance_preference": "low",
+            "floor_weight": 0.8,
+            "ownership_strategy": "balanced",
+            "correlation_strategy": "moderate"
+        }
+        
+        Input: "Build a GPP lineup with contrarian plays"
+        Output: {
+            "lineup_type": "gpp",
+            "variance_preference": "high",
+            "floor_weight": 0.2,
+            "ownership_strategy": "contrarian",
+            "correlation_strategy": "max"
+        }
+        
+        Input: "I want a safe lineup with consistent players, no risky picks"
+        Output: {
+            "lineup_type": "cash",
+            "variance_preference": "low",
+            "floor_weight": 0.9,
+            "ownership_strategy": "chalk",
+            "correlation_strategy": "none"
+        }
+        
+        Input: "Create 5 tournament lineups with different stacks"
+        Output: {
+            "num_lineups": 5,
+            "lineup_type": "gpp",
+            "variance_preference": "high",
+            "floor_weight": 0.3,
+            "correlation_strategy": "max",
+            "diversify_stacks": true
+        }
+        
+        Input: "I want Justin Jefferson and avoid Jets players"
+        Output: {
+            "must_include": ["justinjefferson"],
+            "avoid_teams": ["nyj"]
+        }
+        
+        Input: "Focus on players with high floor for cash games"
+        Output: {
+            "lineup_type": "cash",
+            "variance_preference": "low",
+            "floor_weight": 1.0,
+            "min_projected_points": 10.0
+        }
+        
+        Input: "Create a balanced lineup with some upside"
+        Output: {
+            "lineup_type": "balanced",
+            "variance_preference": "medium",
+            "floor_weight": 0.5,
+            "ownership_strategy": "balanced"
+        }
+        
+        Input: "Stack Chiefs players for GPP"
+        Output: {
+            "lineup_type": "gpp",
+            "stack_teams": ["kc"],
+            "correlation_strategy": "max",
+            "variance_preference": "high"
+        }
+        
+        Input: "Limit Patrick Mahomes to 50% exposure"
+        Output: {
+            "player_exposure_limits": {"patrickmahomes": 0.5}
+        }
+        
+        Input: "Generate 20 unique lineups for a large tournament"
+        Output: {
+            "num_lineups": 20,
+            "lineup_type": "gpp",
+            "variance_preference": "high",
+            "unique_lineups": true,
+            "diversify_stacks": true
+        }
+        
+        ADDITIONAL CONSTRAINTS:
+        - min_projected_points: Minimum projected points for any player
+        - max_salary_per_player: Maximum salary for any single player
+        - min_games: Minimum number of different games to use players from
+        - max_players_per_team: Maximum players from same team
+        - unique_lineups: Ensure all lineups are different
+        - diversify_stacks: Use different team stacks across multiple lineups
+        
+        If the input doesn't contain specific constraints, infer reasonable defaults based on the lineup type.
+        Always provide valid JSON output.
     """,
 )
 
@@ -69,14 +156,13 @@ def call_optimiser(csv_path: str, constraints: dict):
         "csv_path": csv_path,
         "constraints": constraints,
     }
-    r = httpx.post(f"{API_ROOT}/optimise", json=payload, timeout=60)
+    r = httpx.post(f"{API_ROOT}/optimise", json=payload, timeout=None)
     if r.status_code != 200:
         st.error(f"API returned {r.status_code}: {r.json()['detail']}")
         return None, None  # caller can handle None gracefully
 
     data = r.json()
     return data["lineups"], data.get("slate_id")
-
 
 
 # Function to process user input and strategies
@@ -192,11 +278,11 @@ def show_players_tab():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        positions = ["All"] + sorted(player_data["player_position_id"].unique())
+        positions = ["All"] + sorted([pos for pos in player_data["player_position_id"].unique() if pd.notna(pos)])
         selected_position = st.selectbox("Position", positions, index=0)
         
     with col2:
-        teams = ["All"] + sorted(player_data["player_team_id"].unique())
+        teams = ["All"] + sorted([team for team in player_data["player_team_id"].unique() if pd.notna(team)])
         selected_team = st.selectbox("Team", teams, index=0)
         
     with col3:
@@ -308,6 +394,30 @@ def show_optimizer_tab():
         constraints["num_lineups"] = num_lineups
         constraints["max_exposure"] = max_exposure / 100  # Convert to decimal
         
+        # Display the strategy being used
+        if constraints:
+            lineup_type = constraints.get("lineup_type", "balanced")
+            if lineup_type == "cash":
+                st.info("🛡️ **Cash Game Strategy**: Optimizing for consistent, high-floor players with lower variance")
+            elif lineup_type == "gpp":
+                st.info("🚀 **GPP/Tournament Strategy**: Optimizing for high-ceiling players with upside potential")
+            else:
+                st.info("⚖️ **Balanced Strategy**: Mixing safe plays with upside potential")
+            
+            # Show additional strategy details if present
+            strategy_details = []
+            if "variance_preference" in constraints:
+                strategy_details.append(f"Variance: {constraints['variance_preference']}")
+            if "floor_weight" in constraints:
+                strategy_details.append(f"Floor weight: {constraints['floor_weight']:.1%}")
+            if "correlation_strategy" in constraints:
+                strategy_details.append(f"Correlation: {constraints['correlation_strategy']}")
+            if "ownership_strategy" in constraints:
+                strategy_details.append(f"Ownership: {constraints['ownership_strategy']}")
+            
+            if strategy_details:
+                st.caption(" • ".join(strategy_details))
+        
         with st.spinner("Generating lineups..."):
             lineups, slate_id = call_optimiser(
                 csv_path="data/merged_fantasy_football_data.csv",
@@ -317,100 +427,65 @@ def show_optimizer_tab():
         if not lineups:
             st.error("No lineups were generated.")
         else:
+            # Store lineups and slate_id in session state for export functionality
+            st.session_state["current_lineups"] = lineups
+            st.session_state["current_slate_id"] = slate_id
+            
             # Display lineups in tabs
             lineup_tabs = st.tabs([f"Lineup {i+1}" for i in range(len(lineups))])
             for i, lineup in enumerate(lineups):
                 with lineup_tabs[i]:
                     display_lineup(lineup)
-            if st.button("Export to DraftKings CSV"):
-                slot_order = ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]
-                try:
-                    dk_lineups = [
-                        [lineup[pos]["dk_player_id"] for pos in slot_order]
-                        for lineup in lineups
-                    ]
-                except KeyError as err:
-                    st.error(f"Missing DK player ID for position: {err}")
-                else:
-                    try:
-                        r = httpx.post(
-                            f"{API_ROOT}/export/dk_csv",
-                            json={
-                                "slate_id": slate_id,
-                                "lineups": dk_lineups,
-                            },
-                            timeout=60,
-                        )
-                    except Exception as err:  # pragma: no cover - network failures
-                        st.error(f"API request failed: {err}")
-                    else:
-                        if r.status_code == 200:
-                            st.download_button(
-                                "Download DraftKings CSV",
-                                data=r.content,
-                                file_name=f"{slate_id}_NFL_CLASSIC.csv",
-                                mime="text/csv",
-                            )
-                        else:
-                            st.error(f"API returned {r.status_code}: {r.text}")
-
-            # Export current lineups directly (not from database)
-            current_lineups = st.session_state.get("current_lineups")
-            current_slate_id = st.session_state.get("current_slate_id")
             
-            if current_lineups and current_slate_id:
-                if st.button("Export to DraftKings CSV"):
-                    try:
-                        # Create CSV content directly from lineups
-                        import io
-                        
-                        # CSV header
-                        headers = ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"]
-                        csv_lines = [",".join(headers)]
-                        
-                        # Add each lineup as a row
-                        for i, lineup in enumerate(current_lineups):
-                            lineup_row = []
-                            for position in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]:
-                                player_data = lineup.get(position, "")
-                                
-                                # If player_data is a dict with DK ID, use that; otherwise use the string value
-                                if isinstance(player_data, dict):
-                                    player_value = player_data.get("dk_player_id") or player_data.get("draftable_id") or player_data.get("player_name", "")
-                                else:
-                                    player_value = str(player_data)
-                                
-                                lineup_row.append(player_value)
-                            
-                            csv_lines.append(",".join(lineup_row))
-                        
-                        # Create CSV content
-                        csv_content = "\n".join(csv_lines) + "\n"
-                        
-                        # Store for download
-                        st.session_state["dk_csv_bytes"] = csv_content.encode('utf-8')
-                        st.session_state["dk_csv_name"] = f"lineups_{current_slate_id}.csv"
-                        
-                        st.success(f"Generated CSV with {len(current_lineups)} lineups!")
-                        
-                        # Add download button
-                        st.download_button(
-                            "Download DK CSV",
-                            data=st.session_state["dk_csv_bytes"],
-                            file_name=st.session_state["dk_csv_name"],
-                            mime="text/csv",
-                            type="primary"
-                        )
-                        
-                        # Show preview
-                        with st.expander("CSV Preview"):
-                            st.code(csv_content[:500] + ("..." if len(csv_content) > 500 else ""))
-                    except Exception as err:
-                        st.error(f" Export failed: {err}")
-                        import traceback
-                        st.code(traceback.format_exc())
-            else:
-                st.warning(" No lineups or slate ID available for export")
+    # Export button - outside the generate_button block so it persists
+    if "current_lineups" in st.session_state and st.session_state["current_lineups"]:
+        st.markdown("---")
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("Export to CSV", type="primary", key="export_csv_btn"):
+                lineups = st.session_state["current_lineups"]
+                slate_id = st.session_state.get("current_slate_id", "lineups")
+                
+                # Create CSV with player IDs
+                csv_data = []
+                csv_data.append(["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"])
+                
+                for lineup in lineups:
+                    row = []
+                    for pos in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]:
+                        player = lineup.get(pos, {})
+                        # Use draftableId for DraftKings CSV upload (this is what DK expects)
+                        if isinstance(player, dict):
+                            # DraftKings uses draftableId, not dk_player_id
+                            player_id = player.get("draftable_id") or player.get("dk_player_id") or ""
+                            # Convert to int if it's a float to remove decimal
+                            if player_id and isinstance(player_id, (int, float)):
+                                player_id = str(int(player_id))
+                            else:
+                                player_id = str(player_id) if player_id else ""
+                        else:
+                            player_id = ""
+                        row.append(player_id)
+                    csv_data.append(row)
+                
+                # Convert to CSV string
+                csv_content = "\n".join([",".join(row) for row in csv_data])
+                
+                # Store in session state for download button
+                st.session_state["csv_content"] = csv_content
+                st.session_state["csv_filename"] = f"lineups_{slate_id}.csv"
+        
+        # Show download button if CSV is ready
+        if "csv_content" in st.session_state:
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                st.download_button(
+                    "⬇️ Download CSV",
+                    data=st.session_state["csv_content"],
+                    file_name=st.session_state["csv_filename"],
+                    mime="text/csv",
+                    key="download_csv_btn"
+                )
 
 
 def show_lineups_tab():

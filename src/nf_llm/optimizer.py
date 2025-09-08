@@ -151,69 +151,80 @@ class LineupOptimizer:
         return unique_lineups[best_idx]
 
     def _generate_single_scenario(self) -> pd.DataFrame:
-        """Generate a single scenario for optimization."""
+        """Generate a single scenario with random projections."""
         scenario = self.data.copy()
-
-        # Add random noise to projected points (10% standard deviation)
-        noise = np.random.normal(1, 0.1, size=len(scenario))
-
-        # Apply position-specific adjustments
-        position_multipliers = (
-            scenario["player_position_id"]
-            .map(
-                {
-                    "TE": 0.95,  # Slightly lower TE projections
-                    "RB": 1.02,  # Slightly higher RB projections
-                    "WR": 1.02,  # Slightly higher WR projections
-                    "QB": 1.0,  # Keep QB as is
-                    "DST": 1.0,  # Keep DST as is
-                }
-            )
-            .fillna(1.0)
+        
+        # Add variance/floor/ceiling columns if not present
+        if 'floor' not in scenario.columns:
+            # Estimate floor as 70% of projection for most players
+            scenario['floor'] = scenario['projected_points'] * 0.7
+        if 'ceiling' not in scenario.columns:
+            # Estimate ceiling as 130% of projection for most players
+            scenario['ceiling'] = scenario['projected_points'] * 1.3
+        if 'variance' not in scenario.columns:
+            # Calculate variance as the spread between floor and ceiling
+            scenario['variance'] = scenario['ceiling'] - scenario['floor']
+        
+        # Apply random variation to projections
+        scenario["projected_points"] = scenario["projected_points"] * np.random.uniform(
+            0.8, 1.2, size=len(scenario)
         )
-
-        # Apply strategy boosts from analysis
-        strategy_boosts = pd.Series(
-            [
-                self.strategy_boost.get(name, 0)
-                for name in scenario["player_name"]
-            ],
-            index=scenario.index,
-        )
-
-        # Combine all adjustments
-        total_multiplier = noise * position_multipliers * (1 + strategy_boosts)
-        scenario["projected_points"] = (
-            scenario["projected_points"] * total_multiplier
-        )
-
         return scenario
 
-    def apply_strategy_adjustments(self, analysis_results: dict):
-        """Apply strategy-based adjustments to player projections."""
-        self.strategy_boost = {}
-
-        # Value plays boost
-        if "value_plays" in analysis_results:
-            for position, plays in analysis_results["value_plays"].items():
-                for play in plays:  # plays is now a list of dictionaries
-                    boost = min(play["points_zscore"] * 0.1, 0.15)  # Cap at 15%
-                    self.strategy_boost[play["player_name"]] = max(
-                        self.strategy_boost.get(play["player_name"], 0), boost
-                    )
-
-        # Stack consideration
-        if "stacks" in analysis_results:
-            for stack in analysis_results["stacks"][:5]:  # Top 5 stacks
-                qb_boost = 0.1  # 10% boost for QB in top stack
-                receiver_boost = 0.08  # 8% boost for receiver in top stack
-
-                self.strategy_boost[stack["qb"]] = max(
-                    self.strategy_boost.get(stack["qb"], 0), qb_boost
-                )
-                self.strategy_boost[stack["receiver"]] = max(
-                    self.strategy_boost.get(stack["receiver"], 0), receiver_boost
-                )
+    def _adjust_projections_for_strategy(self, scenario: pd.DataFrame, constraints: dict) -> pd.DataFrame:
+        """Adjust player projections based on lineup strategy (cash vs GPP)."""
+        adjusted = scenario.copy()
+        
+        # Get strategy parameters from constraints
+        lineup_type = constraints.get('lineup_type', 'balanced')
+        floor_weight = constraints.get('floor_weight', 0.5)
+        variance_pref = constraints.get('variance_preference', 'medium')
+        
+        # For cash games, heavily weight floor over ceiling
+        if lineup_type == 'cash':
+            floor_weight = max(floor_weight, 0.8)  # Ensure high floor weight for cash
+            # Adjust projections to favor consistent players
+            adjusted['strategy_score'] = (
+                adjusted['floor'] * floor_weight + 
+                adjusted['projected_points'] * (1 - floor_weight)
+            )
+            # Penalize high-variance players in cash games
+            if variance_pref == 'low':
+                variance_penalty = adjusted['variance'] / adjusted['variance'].max() * 0.2
+                adjusted['strategy_score'] = adjusted['strategy_score'] * (1 - variance_penalty)
+                
+        # For GPP, weight ceiling and embrace variance
+        elif lineup_type == 'gpp':
+            floor_weight = min(floor_weight, 0.3)  # Ensure low floor weight for GPP
+            # Adjust projections to favor high-ceiling players
+            adjusted['strategy_score'] = (
+                adjusted['ceiling'] * (1 - floor_weight) + 
+                adjusted['projected_points'] * floor_weight
+            )
+            # Bonus for high-variance players in GPPs
+            if variance_pref == 'high':
+                variance_bonus = adjusted['variance'] / adjusted['variance'].max() * 0.15
+                adjusted['strategy_score'] = adjusted['strategy_score'] * (1 + variance_bonus)
+                
+        # Balanced approach
+        else:
+            adjusted['strategy_score'] = (
+                adjusted['floor'] * floor_weight * 0.3 +
+                adjusted['projected_points'] * 0.4 +
+                adjusted['ceiling'] * (1 - floor_weight) * 0.3
+            )
+        
+        # Apply minimum projected points filter if specified
+        min_points = constraints.get('min_projected_points', 0)
+        if min_points > 0:
+            adjusted = adjusted[adjusted['projected_points'] >= min_points]
+        
+        # Apply max salary per player if specified
+        max_salary = constraints.get('max_salary_per_player', float('inf'))
+        if max_salary < float('inf'):
+            adjusted = adjusted[adjusted['salary'] <= max_salary]
+            
+        return adjusted
 
     def _optimize_single_scenario(
         self, scenario: pd.DataFrame, constraints: dict
@@ -221,6 +232,10 @@ class LineupOptimizer:
         """Optimize a single scenario with given constraints."""
         try:
             print("Starting scenario optimization...")
+            
+            # Adjust projections based on strategy
+            scenario = self._adjust_projections_for_strategy(scenario, constraints)
+            
             prob = pulp.LpProblem("Fantasy_Football", pulp.LpMaximize)
 
             # Create decision variables
@@ -243,9 +258,9 @@ class LineupOptimizer:
                 cat="Binary",
             )
 
-            # Objective function: Maximize projected points
+            # Objective function: Use strategy_score if available, otherwise projected_points
             prob += pulp.lpSum(
-                p["projected_points"]
+                p.get("strategy_score", p["projected_points"])
                 * (
                     base_vars[p["player_name"], p["player_position_id"]]
                     + (

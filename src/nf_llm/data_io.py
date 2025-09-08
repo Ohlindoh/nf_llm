@@ -33,6 +33,12 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
     if "projected_points" in df.columns:
         df["projected_points"] = pd.to_numeric(df["projected_points"], errors="coerce")
 
+    # Remove rows with NaN values in critical columns for optimization
+    critical_cols = ["projected_points", "salary"]
+    existing_critical_cols = [col for col in critical_cols if col in df.columns]
+    if existing_critical_cols:
+        df = df.dropna(subset=existing_critical_cols)
+
     # Add value metric for the UI
     if "value" not in df.columns and {"projected_points", "salary"} <= set(df.columns):
         df["value"] = df["projected_points"] / df["salary"]
