@@ -7,9 +7,17 @@ import pandas as pd
 import streamlit as st
 from autogen import AssistantAgent, UserProxyAgent
 
+# Try multiple methods to get the API key
 _secret_path = pathlib.Path("/run/secrets/openai_api_key")
-if not os.getenv("OPENAI_API_KEY") and _secret_path.exists():
-    os.environ["OPENAI_API_KEY"] = _secret_path.read_text().strip()
+if not os.getenv("OPENAI_API_KEY"):
+    if _secret_path.exists():
+        os.environ["OPENAI_API_KEY"] = _secret_path.read_text().strip()
+    else:
+        # Fallback for development - will error if not set
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if not api_key:
+            st.error("⚠️ OPENAI_API_KEY not found. Set it in your environment before running docker-compose.")
+            st.stop()
 
 # Initialize LLM configuration
 llm_config = {
@@ -263,9 +271,29 @@ def show_players_tab():
     """Display the Players tab with scouting table and undervalued players panel."""
     st.header("Player Scouting")
     
+    # Add refresh button and file info at the top
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        if st.button("🔄 Refresh Data", key="refresh_players"):
+            st.cache_data.clear()
+            st.rerun()
+    
     # Load player data
     try:
-        player_data = pd.read_csv("data/merged_fantasy_football_data.csv")
+        csv_path = "data/merged_fantasy_football_data.csv"
+        player_data = pd.read_csv(csv_path)
+        
+        # Show file modification time
+        try:
+            import os
+            from datetime import datetime
+            mtime = os.path.getmtime(csv_path)
+            file_time = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+            with col1:
+                st.caption(f"Data last modified: {file_time}")
+        except:
+            pass
+        
         if player_data is None or player_data.empty:
             st.info("No player data available. Please check the data source.")
             return
@@ -372,6 +400,21 @@ def show_optimizer_tab():
         max_exposure = st.slider(
             "Maximum Player Exposure (%)", min_value=0, max_value=100, value=65
         )
+        # Add QB diversity controls
+        st.markdown("**QB Diversity Settings**")
+        qb_diversity_mode = st.selectbox(
+            "QB Diversity Mode",
+            ["rotate", "limit", "none"],
+            index=0,
+            help="rotate: Force different QBs each lineup | limit: Enforce max QB exposure | none: No QB restrictions"
+        )
+        max_qb_exposure = st.slider(
+            "Maximum QB Exposure (%)", 
+            min_value=5, 
+            max_value=50, 
+            value=15,
+            help="Maximum percentage of lineups a single QB can appear in"
+        )
         # Add a visual divider
         st.markdown("---")
         st.caption("Click 'Generate Lineups' to create optimized lineups based on your constraints")
@@ -393,6 +436,8 @@ def show_optimizer_tab():
         )
         constraints["num_lineups"] = num_lineups
         constraints["max_exposure"] = max_exposure / 100  # Convert to decimal
+        constraints["max_qb_exposure"] = max_qb_exposure / 100  # Convert to decimal
+        constraints["qb_diversity_mode"] = qb_diversity_mode
         
         # Display the strategy being used
         if constraints:

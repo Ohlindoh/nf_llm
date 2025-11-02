@@ -1,0 +1,46 @@
+.DS_Store
+__pycache__/
+.cache/
+.pytest_cache
+data/*.db
+
+# Python package build artifacts
+*.egg-info/
+build/
+dist/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+
+# Security - Never copy these into Docker images
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+.git/
+
+# Databases
+*.duckdb
+*.duckdb.wal
+
+# Test/CI artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+*.md
+!README.md

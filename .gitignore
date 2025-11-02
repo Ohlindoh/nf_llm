@@ -19,7 +19,25 @@ env/
 .vscode/
 .idea/
 *.swp
-*.swo
 
 # OS files
 Thumbs.db
+
+# Security - Environment files
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# DuckDB databases
+*.duckdb
+*.duckdb.wal
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# Generated lineup exports only (not sample data)
+lineups_*.csv
+**/lineups_*.csv

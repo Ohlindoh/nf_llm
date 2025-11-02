@@ -12,6 +12,8 @@ services:
     environment:
       - PYTHONPATH=/app/src
       - WATCHFILES_FORCE_POLLING=true  # Better file watching on Windows
+    ports:
+      - "8001:8000"
     command: >
       uv run uvicorn nf_llm.api.main:app 
       --host 0.0.0.0 
@@ -31,6 +33,8 @@ services:
       - PYTHONPATH=/app/src
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - STREAMLIT_SERVER_RUNONCAVE=true
+    ports:
+      - "8502:8501"
     command: >
       uv run streamlit run src/nf_llm/app.py 
       --server.port 8501 

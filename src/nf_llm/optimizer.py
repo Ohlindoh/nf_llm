@@ -39,6 +39,7 @@ class LineupOptimizer:
         self.previous_lineups = []
         self.player_usage = {}
         self.strategy_boost = {}
+        self.qb_usage = {}  # Track QB usage separately for diversity
         self._validate_data()
 
     def _validate_data(self):
@@ -62,12 +63,14 @@ class LineupOptimizer:
         """Generate multiple optimized lineups with exposure limits."""
         num_lineups = int(constraints.get("num_lineups", 1))
         max_exposure = float(constraints.get("max_exposure", 0.3))
+        max_qb_exposure = float(constraints.get("max_qb_exposure", 0.15))  # Lower QB exposure limit
+        qb_diversity_mode = constraints.get("qb_diversity_mode", "rotate")  # "rotate", "limit", or "none"
         lineups = []
 
         for i in range(num_lineups):
             # Update exposure constraints
             exposure_constraints = self._calculate_exposure_constraints(
-                i + 1, max_exposure
+                i + 1, max_exposure, max_qb_exposure, qb_diversity_mode
             )
             current_constraints = {**constraints, **exposure_constraints}
 
@@ -177,49 +180,94 @@ class LineupOptimizer:
         
         # Get strategy parameters from constraints
         lineup_type = constraints.get('lineup_type', 'balanced')
-        floor_weight = constraints.get('floor_weight', 0.5)
-        variance_pref = constraints.get('variance_preference', 'medium')
+        ownership_strategy = constraints.get('ownership_strategy', 'balanced')
         
-        # For cash games, heavily weight floor over ceiling
+        # Calculate value score (points per $1000 of salary) - REAL DATA
+        adjusted['value_score'] = adjusted['projected_points'] / (adjusted['salary'] / 1000)
+        
+        # For CASH games - Focus on value and consistency
         if lineup_type == 'cash':
-            floor_weight = max(floor_weight, 0.8)  # Ensure high floor weight for cash
-            # Adjust projections to favor consistent players
-            adjusted['strategy_score'] = (
-                adjusted['floor'] * floor_weight + 
-                adjusted['projected_points'] * (1 - floor_weight)
-            )
-            # Penalize high-variance players in cash games
-            if variance_pref == 'low':
-                variance_penalty = adjusted['variance'] / adjusted['variance'].max() * 0.2
-                adjusted['strategy_score'] = adjusted['strategy_score'] * (1 - variance_penalty)
-                
-        # For GPP, weight ceiling and embrace variance
+            # 1. Filter out low projection players (REAL DATA)
+            # Cash games should avoid risky low-projection plays
+            for pos in adjusted['player_position_id'].unique():
+                pos_players = adjusted[adjusted['player_position_id'] == pos]
+                if len(pos_players) > 5:
+                    # Remove bottom 25% of projections at each position
+                    min_projection = pos_players['projected_points'].quantile(0.25)
+                    adjusted = adjusted[
+                        (adjusted['player_position_id'] != pos) | 
+                        (adjusted['projected_points'] >= min_projection)
+                    ]
+            
+            # 2. Boost high-value plays significantly (REAL DATA)
+            # Cash games love value - normalize and apply bonus
+            value_mean = adjusted['value_score'].mean()
+            value_std = adjusted['value_score'].std()
+            if value_std > 0:
+                value_z_score = (adjusted['value_score'] - value_mean) / value_std
+                # Players with good value get up to 20% boost
+                value_multiplier = 1 + (value_z_score.clip(-1, 2) * 0.1)
+                adjusted['strategy_score'] = adjusted['projected_points'] * value_multiplier
+            else:
+                adjusted['strategy_score'] = adjusted['projected_points']
+            
+            # 3. Penalize very expensive players in cash (REAL DATA)
+            # Cash games often avoid paying up for studs
+            salary_threshold = adjusted['salary'].quantile(0.85)
+            expensive_mask = adjusted['salary'] > salary_threshold
+            adjusted.loc[expensive_mask, 'strategy_score'] *= 0.9
+            
+            # 4. Minimum projection threshold for cash (REAL DATA)
+            # Don't play anyone projecting under 5 points
+            adjusted = adjusted[adjusted['projected_points'] >= 5.0]
+            
+        # For GPP - Embrace ceiling and differentiation
         elif lineup_type == 'gpp':
-            floor_weight = min(floor_weight, 0.3)  # Ensure low floor weight for GPP
-            # Adjust projections to favor high-ceiling players
-            adjusted['strategy_score'] = (
-                adjusted['ceiling'] * (1 - floor_weight) + 
-                adjusted['projected_points'] * floor_weight
-            )
-            # Bonus for high-variance players in GPPs
-            if variance_pref == 'high':
-                variance_bonus = adjusted['variance'] / adjusted['variance'].max() * 0.15
-                adjusted['strategy_score'] = adjusted['strategy_score'] * (1 + variance_bonus)
+            # 1. GPP can play anyone (no filtering)
+            adjusted['strategy_score'] = adjusted['projected_points'].copy()
+            
+            # 2. Ownership-based adjustments (REAL DATA)
+            if ownership_strategy == 'contrarian':
+                # Fade the obvious value plays
+                value_mean = adjusted['value_score'].mean()
+                value_std = adjusted['value_score'].std()
+                if value_std > 0:
+                    value_z_score = (adjusted['value_score'] - value_mean) / value_std
+                    # High value = likely high owned = fade in GPP
+                    ownership_penalty = value_z_score.clip(0, 2) * 0.1
+                    adjusted['strategy_score'] *= (1 - ownership_penalty)
                 
+                # Boost low-salary dart throws
+                salary_threshold = adjusted['salary'].quantile(0.25)
+                cheap_mask = adjusted['salary'] < salary_threshold
+                adjusted.loc[cheap_mask, 'strategy_score'] *= 1.15
+            
+            # 3. Boost high-upside expensive plays (REAL DATA)
+            # GPPs need ceiling, expensive players often have it
+            elite_threshold = adjusted['salary'].quantile(0.90)
+            elite_mask = adjusted['salary'] > elite_threshold
+            adjusted.loc[elite_mask, 'strategy_score'] *= 1.1
+            
+            # 4. Don't penalize low projections - GPPs need variance
+            # Keep all players available for GPP dart throws
+            
         # Balanced approach
         else:
-            adjusted['strategy_score'] = (
-                adjusted['floor'] * floor_weight * 0.3 +
-                adjusted['projected_points'] * 0.4 +
-                adjusted['ceiling'] * (1 - floor_weight) * 0.3
-            )
+            # Simple value adjustment
+            value_mean = adjusted['value_score'].mean()
+            value_std = adjusted['value_score'].std()
+            if value_std > 0:
+                value_z_score = (adjusted['value_score'] - value_mean) / value_std
+                value_multiplier = 1 + (value_z_score.clip(-1, 1) * 0.05)
+                adjusted['strategy_score'] = adjusted['projected_points'] * value_multiplier
+            else:
+                adjusted['strategy_score'] = adjusted['projected_points']
         
-        # Apply minimum projected points filter if specified
+        # Apply any explicit constraints
         min_points = constraints.get('min_projected_points', 0)
         if min_points > 0:
             adjusted = adjusted[adjusted['projected_points'] >= min_points]
         
-        # Apply max salary per player if specified
         max_salary = constraints.get('max_salary_per_player', float('inf'))
         if max_salary < float('inf'):
             adjusted = adjusted[adjusted['salary'] <= max_salary]
@@ -349,6 +397,12 @@ class LineupOptimizer:
                 self.player_usage[player_name] = (
                     self.player_usage.get(player_name, 0) + 1
                 )
+                
+                # Track QB usage separately for better diversity control
+                if position == "QB":
+                    self.qb_usage[player_name] = (
+                        self.qb_usage.get(player_name, 0) + 1
+                    )
 
         # Also add the lineup to our previous lineups list for reference
         self.previous_lineups.append(lineup)
@@ -478,17 +532,74 @@ class LineupOptimizer:
                     )
                     == 0
                 )
+                
+        # Add QB diversity constraints
+        if "avoid_qbs" in constraints:
+            for qb_name in constraints["avoid_qbs"]:
+                prob += (
+                    pulp.lpSum(
+                        base_vars[p["player_name"], p["player_position_id"]]
+                        for p in players
+                        if p["player_name"] == qb_name and p["player_position_id"] == "QB"
+                    )
+                    == 0
+                )
+                
+        # Force specific QB if in rotation mode
+        if "force_qb" in constraints:
+            qb_name = constraints["force_qb"]
+            prob += (
+                pulp.lpSum(
+                    base_vars[p["player_name"], p["player_position_id"]]
+                    for p in players
+                    if p["player_name"] == qb_name and p["player_position_id"] == "QB"
+                )
+                == 1
+            )
 
     def _calculate_exposure_constraints(
-        self, current_lineup_count: int, max_exposure: float
+        self, current_lineup_count: int, max_exposure: float, max_qb_exposure: float = 0.15, qb_diversity_mode: str = "limit"
     ) -> dict:
         """Calculate exposure-based constraints for the next lineup."""
-        constraints = {"avoid_players": []}
+        constraints = {"avoid_players": [], "avoid_qbs": []}
 
         if current_lineup_count > 1:
+            # Regular player exposure limits
             for player_name, count in self.player_usage.items():
                 if count / current_lineup_count >= max_exposure:
                     constraints["avoid_players"].append(player_name)
+            
+            # Special QB exposure handling
+            if qb_diversity_mode == "rotate":
+                # In rotate mode, force different QBs each time until we've used many
+                # Get list of all QBs in data
+                all_qbs = self.data[self.data["player_position_id"] == "QB"]["player_name"].unique()
+                unused_qbs = [qb for qb in all_qbs if qb not in self.qb_usage]
+                
+                if unused_qbs:
+                    # If we have unused QBs, avoid all used QBs to force a new one
+                    constraints["avoid_qbs"] = list(self.qb_usage.keys())
+                else:
+                    # If all QBs have been used, find the least used ones
+                    if self.qb_usage:
+                        min_usage = min(self.qb_usage.values())
+                        # Avoid QBs that have been used more than minimum
+                        for qb_name, count in self.qb_usage.items():
+                            if count > min_usage:
+                                constraints["avoid_qbs"].append(qb_name)
+                                
+            elif qb_diversity_mode == "limit":
+                # In limit mode, strictly enforce max QB exposure
+                for qb_name, count in self.qb_usage.items():
+                    if count / current_lineup_count >= max_qb_exposure:
+                        constraints["avoid_qbs"].append(qb_name)
+            
+            # Remove QB names from general avoid_players if they're in avoid_qbs
+            # to prevent double-constraining
+            constraints["avoid_players"] = [
+                p for p in constraints["avoid_players"] 
+                if p not in constraints["avoid_qbs"]
+            ]
 
         return constraints
 
@@ -526,7 +637,8 @@ class LineupOptimizer:
                     lineup[pos] = player
                 used_players.add(name)
 
-        # Then handle FLEX position
+         # Then handle FLEX position - collect ALL candidates to avoid iteration order bias
+        flex_candidates = []
         for player in players:
             name = player["player_name"]
             pos = player["player_position_id"]
@@ -537,9 +649,13 @@ class LineupOptimizer:
             if pos in self.settings.FLEX_POSITIONS and is_selected(
                 flex_vars[name, pos]
             ):
-                lineup["FLEX"] = player
-                used_players.add(name)
-                break
+                flex_candidates.append(player)
+
+        # Select the actual FLEX player the optimizer chose (highest projected points)
+        if flex_candidates:
+            best_flex = max(flex_candidates, key=lambda p: float(p["projected_points"]))
+            lineup["FLEX"] = best_flex
+            used_players.add(best_flex["player_name"])
 
         print(f"Built lineup with {len(lineup)} players")
         return lineup
