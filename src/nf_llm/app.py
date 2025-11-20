@@ -432,6 +432,12 @@ def show_optimizer_tab():
     
     # Results section
     if generate_button:
+        # Clear any previous export data when generating new lineups
+        if "csv_content" in st.session_state:
+            del st.session_state["csv_content"]
+        if "csv_filename" in st.session_state:
+            del st.session_state["csv_filename"]
+        
         st.subheader("Optimization Results")
         # Process user input and strategies
         constraints = process_user_input_and_strategies(
@@ -488,52 +494,50 @@ def show_optimizer_tab():
     # Export button - outside the generate_button block so it persists
     if "current_lineups" in st.session_state and st.session_state["current_lineups"]:
         st.markdown("---")
+        st.subheader("Export Lineups")
+        
+        lineups = st.session_state["current_lineups"]
+        slate_id = st.session_state.get("current_slate_id", "lineups")
+        
+        # Create CSV with player IDs
+        csv_data = []
+        csv_data.append(["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"])
+        
+        for lineup in lineups:
+            row = []
+            for pos in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]:
+                player = lineup.get(pos, {})
+                # Use draftableId for DraftKings CSV upload (this is what DK expects)
+                if isinstance(player, dict):
+                    # DraftKings uses draftableId, not dk_player_id
+                    player_id = player.get("draftable_id") or player.get("dk_player_id") or ""
+                    # Convert to int if it's a float to remove decimal
+                    if player_id and isinstance(player_id, (int, float)):
+                        player_id = str(int(player_id))
+                    else:
+                        player_id = str(player_id) if player_id else ""
+                else:
+                    player_id = ""
+                row.append(player_id)
+            csv_data.append(row)
+        
+        # Convert to CSV string
+        csv_content = "\n".join([",".join(row) for row in csv_data])
+        filename = f"lineups_{slate_id}.csv"
+        
+        # Single download button centered
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("Export to CSV", type="primary", key="export_csv_btn"):
-                lineups = st.session_state["current_lineups"]
-                slate_id = st.session_state.get("current_slate_id", "lineups")
-                
-                # Create CSV with player IDs
-                csv_data = []
-                csv_data.append(["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"])
-                
-                for lineup in lineups:
-                    row = []
-                    for pos in ["QB", "RB1", "RB2", "WR1", "WR2", "WR3", "TE", "FLEX", "DST"]:
-                        player = lineup.get(pos, {})
-                        # Use draftableId for DraftKings CSV upload (this is what DK expects)
-                        if isinstance(player, dict):
-                            # DraftKings uses draftableId, not dk_player_id
-                            player_id = player.get("draftable_id") or player.get("dk_player_id") or ""
-                            # Convert to int if it's a float to remove decimal
-                            if player_id and isinstance(player_id, (int, float)):
-                                player_id = str(int(player_id))
-                            else:
-                                player_id = str(player_id) if player_id else ""
-                        else:
-                            player_id = ""
-                        row.append(player_id)
-                    csv_data.append(row)
-                
-                # Convert to CSV string
-                csv_content = "\n".join([",".join(row) for row in csv_data])
-                
-                # Store in session state for download button
-                st.session_state["csv_content"] = csv_content
-                st.session_state["csv_filename"] = f"lineups_{slate_id}.csv"
-        
-        # Show download button if CSV is ready
-        if "csv_content" in st.session_state:
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col2:
-                st.download_button(
-                    "⬇️ Download CSV",
-                    data=st.session_state["csv_content"],
-                    file_name=st.session_state["csv_filename"],
-                    mime="text/csv",
-                    key="download_csv_btn"
-                )
+            st.download_button(
+                label="📥 Download DraftKings CSV",
+                data=csv_content,
+                file_name=filename,
+                mime="text/csv",
+                type="primary",
+                use_container_width=True,
+                key="download_csv_btn"
+            )
+        st.caption(f"Export {len(lineups)} lineup(s) for DraftKings upload")
 
 
 def show_lineups_tab():
