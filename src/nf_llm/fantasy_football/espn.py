@@ -61,6 +61,15 @@ def _find_user_team(league: Any, swid: str) -> Any:
     )
 
 
+def load_league(league_id: int, year: int, swid: str, espn_s2: str) -> Any:
+    """Instantiate and return an ``espn_api`` ``League`` object."""
+
+    if League is None:  # pragma: no cover - dependency not installed
+        raise ImportError("espn-api package is required to fetch ESPN data")
+
+    return League(league_id=league_id, year=year, swid=swid, espn_s2=espn_s2)
+
+
 def get_user_team(league_id: int, year: int, swid: str, espn_s2: str) -> List[Dict[str, Any]]:
     """Return the roster for the team associated with the provided credentials.
 
@@ -68,10 +77,7 @@ def get_user_team(league_id: int, year: int, swid: str, espn_s2: str) -> List[Di
     the league's teams for one that lists the provided ``swid`` as an owner.
     """
 
-    if League is None:  # pragma: no cover - dependency not installed
-        raise ImportError("espn-api package is required to fetch ESPN data")
-
-    league = League(league_id=league_id, year=year, swid=swid, espn_s2=espn_s2)
+    league = load_league(league_id=league_id, year=year, swid=swid, espn_s2=espn_s2)
     team = _find_user_team(league, swid)
     if team is None:
         raise ValueError("Could not determine team for provided credentials")
@@ -86,6 +92,58 @@ def get_user_team(league_id: int, year: int, swid: str, espn_s2: str) -> List[Di
             }
         )
     return roster
+
+
+def _owner_names(owners: Any) -> List[str]:
+    """Return a list of owner display names from ``owners`` collection."""
+
+    names: List[str] = []
+    for owner in owners or []:
+        if isinstance(owner, dict):
+            first = owner.get("firstName") or owner.get("first_name") or ""
+            last = owner.get("lastName") or owner.get("last_name") or ""
+            name = f"{first} {last}".strip()
+            names.append(name or str(owner))
+        else:
+            names.append(str(owner))
+    return names
+
+
+def get_league_rosters(
+    league_id: int, year: int, swid: str, espn_s2: str
+) -> List[Dict[str, Any]]:
+    """Return rosters for every team in the league.
+
+    Each team entry includes the name, team identifier, owners, and the full
+    roster with positional and projected points information when available.
+    """
+
+    league = load_league(league_id=league_id, year=year, swid=swid, espn_s2=espn_s2)
+
+    rosters: List[Dict[str, Any]] = []
+    for team in getattr(league, "teams", []):
+        roster: List[Dict[str, Any]] = []
+        for player in getattr(team, "roster", []):
+            roster.append(
+                {
+                    "name": getattr(player, "name", ""),
+                    "position": getattr(player, "position", ""),
+                    "proTeam": getattr(player, "proTeam", ""),
+                    "projected_points": getattr(player, "projected_points", None),
+                }
+            )
+
+        rosters.append(
+            {
+                "team_id": getattr(team, "team_id", None),
+                "team_name": getattr(team, "team_name", ""),
+                "owners": _owner_names(getattr(team, "owners", [])),
+                "roster": roster,
+            }
+        )
+
+    rosters.sort(key=lambda t: (t["team_id"] is None, t["team_id"]))
+    return rosters
 
 
 def _lineup_slots(league: Any | None) -> Tuple[Dict[str, int], Dict[str, Set[str]]]:
