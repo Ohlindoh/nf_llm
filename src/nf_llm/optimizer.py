@@ -185,15 +185,30 @@ class LineupOptimizer:
         # Calculate value score (points per $1000 of salary) - REAL DATA
         adjusted['value_score'] = adjusted['projected_points'] / (adjusted['salary'] / 1000)
         
+        # Position-specific value scaling to prevent TE over-valuation
+        # TEs tend to have inflated value scores because they're cheap but score less
+        # Apply position-based scaling factors
+        position_value_scale = {
+            'QB': 1.0,   # QBs are appropriately valued
+            'RB': 1.1,   # RBs slightly undervalued due to higher salaries
+            'WR': 1.05,  # WRs slightly undervalued
+            'TE': 0.85,  # TEs tend to be overvalued due to low salaries
+            'DST': 1.0   # DSTs appropriately valued
+        }
+        
+        for pos, scale in position_value_scale.items():
+            pos_mask = adjusted['player_position_id'] == pos
+            adjusted.loc[pos_mask, 'value_score'] *= scale
+        
         # For CASH games - Focus on value and consistency
         if lineup_type == 'cash':
-            # 1. Filter out low projection players (REAL DATA)
-            # Cash games should avoid risky low-projection plays
+            # 1. Filter out only the worst projection players (REAL DATA)
+            # Cash games should avoid risky low-projection plays, but not too aggressively
             for pos in adjusted['player_position_id'].unique():
                 pos_players = adjusted[adjusted['player_position_id'] == pos]
-                if len(pos_players) > 5:
-                    # Remove bottom 25% of projections at each position
-                    min_projection = pos_players['projected_points'].quantile(0.25)
+                if len(pos_players) > 8:
+                    # Remove only bottom 10% to keep player pool viable
+                    min_projection = pos_players['projected_points'].quantile(0.10)
                     adjusted = adjusted[
                         (adjusted['player_position_id'] != pos) | 
                         (adjusted['projected_points'] >= min_projection)
@@ -218,8 +233,18 @@ class LineupOptimizer:
             adjusted.loc[expensive_mask, 'strategy_score'] *= 0.9
             
             # 4. Minimum projection threshold for cash (REAL DATA)
-            # Don't play anyone projecting under 5 points
-            adjusted = adjusted[adjusted['projected_points'] >= 5.0]
+            # Keep the bar lower to ensure feasibility - let value scoring do the work
+            adjusted = adjusted[adjusted['projected_points'] >= 3.0]
+            
+            # 5. Verify we have enough players at each position after filtering
+            for pos in ['QB', 'RB', 'WR', 'TE', 'DST']:
+                pos_count = len(adjusted[adjusted['player_position_id'] == pos])
+                required = self.settings.POSITIONS.get(pos, 0)
+                if pos_count < required:
+                    print(f"WARNING: Only {pos_count} {pos} players after filtering, need {required}. Relaxing filters.")
+                    # Remove the projection filter for this position to ensure feasibility
+                    all_pos_players = scenario[scenario['player_position_id'] == pos]
+                    adjusted = pd.concat([adjusted, all_pos_players]).drop_duplicates(subset=['player_name'])
             
         # For GPP - Embrace ceiling and differentiation
         elif lineup_type == 'gpp':
@@ -283,6 +308,30 @@ class LineupOptimizer:
             
             # Adjust projections based on strategy
             scenario = self._adjust_projections_for_strategy(scenario, constraints)
+            
+            # Debug: Show player counts and top FLEX options by position
+            print(f"Players by position: {scenario['player_position_id'].value_counts().to_dict()}")
+            
+            # Show average value scores by position to understand TE bias
+            print("\nAverage value scores by position:")
+            for pos in ['QB', 'RB', 'WR', 'TE', 'DST']:
+                pos_players = scenario[scenario['player_position_id'] == pos]
+                if not pos_players.empty and 'value_score' in pos_players.columns:
+                    avg_value = pos_players['value_score'].mean()
+                    avg_salary = pos_players['salary'].mean()
+                    avg_proj = pos_players['projected_points'].mean()
+                    print(f"  {pos}: Avg Value Score: {avg_value:.2f}, Avg Salary: ${avg_salary:.0f}, Avg Proj: {avg_proj:.1f}")
+            
+            print("\nTop 2 FLEX-eligible players by position (by strategy_score):")
+            for flex_pos in ['RB', 'WR', 'TE']:
+                flex_pool = scenario[scenario['player_position_id'] == flex_pos]
+                if not flex_pool.empty:
+                    sort_col = 'strategy_score' if 'strategy_score' in flex_pool.columns else 'projected_points'
+                    top_2 = flex_pool.nlargest(2, sort_col)
+                    for _, p in top_2.iterrows():
+                        score = p.get('strategy_score', p['projected_points'])
+                        value = p.get('value_score', p['projected_points'] / (p['salary'] / 1000))
+                        print(f"  {flex_pos}: {p['player_name']} - Score:{score:.1f} Value:{value:.2f} Proj:{p['projected_points']:.1f} ${p['salary']:.0f}")
             
             prob = pulp.LpProblem("Fantasy_Football", pulp.LpMaximize)
 
@@ -464,6 +513,25 @@ class LineupOptimizer:
             )
             == 1
         )
+        
+        # Limit total TEs to 1 (unless explicitly allowing double TE)
+        # This prevents the optimizer from putting TEs in FLEX too often
+        allow_double_te = constraints.get('allow_double_te', False)
+        if not allow_double_te:
+            prob += (
+                pulp.lpSum(
+                    base_vars[p["player_name"], p["player_position_id"]]
+                    + (
+                        flex_vars.get((p["player_name"], p["player_position_id"]), 0)
+                        if p["player_position_id"] == "TE"
+                        else 0
+                    )
+                    for p in players
+                    if p["player_position_id"] == "TE"
+                )
+                <= 1,
+                "Max_One_TE"
+            )
 
         # Player can't be in both base and FLEX
         for p in players:
@@ -651,9 +719,19 @@ class LineupOptimizer:
             ):
                 flex_candidates.append(player)
 
-        # Select the actual FLEX player the optimizer chose (highest projected points)
+        # Debug: Show all FLEX candidates
         if flex_candidates:
-            best_flex = max(flex_candidates, key=lambda p: float(p["projected_points"]))
+            print(f"\nFLEX candidates selected by optimizer:")
+            for p in flex_candidates:
+                score = p.get('strategy_score', p['projected_points'])
+                value = p.get('value_score', 0)
+                print(f"  {p['player_position_id']}: {p['player_name']} - Strategy:{score:.1f} Value:{value:.2f} Proj:{p['projected_points']:.1f}")
+        
+        # Select the actual FLEX player the optimizer chose (use strategy_score, not projected_points!)
+        if flex_candidates:
+            # CRITICAL FIX: Use strategy_score (what optimizer actually optimized for)
+            best_flex = max(flex_candidates, key=lambda p: float(p.get('strategy_score', p["projected_points"])))
+            print(f"Selected for FLEX: {best_flex['player_position_id']} {best_flex['player_name']}")
             lineup["FLEX"] = best_flex
             used_players.add(best_flex["player_name"])
 
