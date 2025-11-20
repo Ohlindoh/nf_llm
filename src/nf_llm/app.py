@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import pathlib
@@ -6,6 +7,8 @@ import httpx
 import pandas as pd
 import streamlit as st
 from autogen import AssistantAgent, UserProxyAgent
+from nf_llm.fantasy_football.espn import _find_user_team, get_league_rosters, load_league
+from nf_llm.fantasy_football.espn_optimizer import build_optimal_lineup
 
 # Try multiple methods to get the API key
 _secret_path = pathlib.Path("/run/secrets/openai_api_key")
@@ -623,27 +626,41 @@ def show_admin_tab():
 
 
 def create_espn_team_ui():
-    """Simple interface for viewing a user's ESPN fantasy team."""
+    """Interface for viewing ESPN fantasy data including full league rosters."""
     st.title("ESPN Team Viewer")
     league_id = st.text_input("League ID", "")
     # Remove year input and use current year automatically
     swid = st.text_input("SWID")
     espn_s2 = st.text_input("ESPN_S2")
+    current_year = datetime.datetime.now().year
 
-    if st.button("Load Team"):
-        try:
-            import datetime
-            from espn_api.football import League
-            from nf_llm.fantasy_football.espn import _find_user_team
-            from nf_llm.fantasy_football.espn_optimizer import build_optimal_lineup
+    tab_my_team, tab_league_rosters = st.tabs(["My Team", "League Rosters"])
 
-            current_year = datetime.datetime.now().year
-            league = League(
-                league_id=int(league_id),
-                year=current_year,
-                swid=swid,
-                espn_s2=espn_s2,
-            )
+    with tab_my_team:
+        st.subheader("Your Team & Recommendations")
+
+        if st.button("Load My Team", key="load_my_team"):
+            if not league_id or not swid or not espn_s2:
+                st.error("Please provide League ID, SWID, and ESPN_S2 to load your team.")
+                return
+
+            try:
+                numeric_league_id = int(league_id)
+            except ValueError:
+                st.error("League ID must be a number.")
+                return
+
+            try:
+                league = load_league(
+                    league_id=numeric_league_id,
+                    year=current_year,
+                    swid=swid,
+                    espn_s2=espn_s2,
+                )
+            except Exception as e:  # pragma: no cover - UI feedback only
+                st.error(f"Failed to load league: {e}")
+                return
+
             team = _find_user_team(league, swid)
             if team is None:
                 st.error("Could not determine team for provided credentials")
@@ -673,8 +690,59 @@ def create_espn_team_ui():
                 st.json(result["pickups"])
             else:
                 st.info("No significant pickups found.")
-        except Exception as e:  # pragma: no cover - UI feedback only
-            st.error(f"Failed to load team: {e}")
+
+    with tab_league_rosters:
+        st.subheader("Browse All Team Rosters")
+        st.caption("View every roster in your ESPN league in one place.")
+
+        if st.button("Load League Rosters", key="load_league_rosters"):
+            if not league_id or not swid or not espn_s2:
+                st.error("Please provide League ID, SWID, and ESPN_S2 to browse rosters.")
+                return
+
+            try:
+                numeric_league_id = int(league_id)
+            except ValueError:
+                st.error("League ID must be a number.")
+                return
+
+            try:
+                rosters = get_league_rosters(
+                    league_id=numeric_league_id,
+                    year=current_year,
+                    swid=swid,
+                    espn_s2=espn_s2,
+                )
+            except Exception as e:  # pragma: no cover - UI feedback only
+                st.error(f"Failed to load league rosters: {e}")
+                return
+
+            if not rosters:
+                st.info("No rosters were returned for this league.")
+                return
+
+            team_labels = [
+                f"{team['team_name'] or 'Team'} (ID {team['team_id']})" for team in rosters
+            ]
+            selected_team_label = st.selectbox(
+                "Select a team to view its roster", team_labels, key="roster_team_select"
+            )
+
+            selected_index = team_labels.index(selected_team_label)
+            selected_team = rosters[selected_index]
+
+            st.markdown(
+                f"**Owners:** {', '.join(selected_team['owners']) if selected_team['owners'] else 'Unknown'}"
+            )
+            st.dataframe(pd.DataFrame(selected_team["roster"]))
+
+            with st.expander("View all team rosters"):
+                for team_label, team_data in zip(team_labels, rosters):
+                    st.markdown(f"### {team_label}")
+                    st.markdown(
+                        f"**Owners:** {', '.join(team_data['owners']) if team_data['owners'] else 'Unknown'}"
+                    )
+                    st.dataframe(pd.DataFrame(team_data["roster"]))
 
 
 def main():
