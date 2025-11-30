@@ -16,7 +16,8 @@ services:
     environment:
       - PYTHONPATH=/app/src
     volumes:
-      - .:/app  # For development hot reload (no cache for immediate data updates)
+      - ./data:/app/data
+      - ./src:/app/src
     networks: [backend]
     ports:
       - "8000:8000"
@@ -45,7 +46,8 @@ services:
       api:
         condition: service_healthy
     volumes:
-      - .:/app  # For development hot reload (no cache for immediate data updates)
+      - ./data:/app/data
+      - ./src:/app/src
     networks: [backend]
     ports:
       - "8501:8501"
